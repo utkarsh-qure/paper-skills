@@ -1,0 +1,16 @@
+[project]
+name = "paper-skills"
+version = "0.1.0"
+description = "Drop-in skills for AI coding agents that turn an arXiv URL into a deeply-researched paper explainer"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pillow>=10.0",
+    "pymupdf>=1.23",
+]
+
+# This project ships markdown skill files + standalone Python utility scripts.
+# It is not a library — `uv sync` only installs the dependencies needed by
+# scripts/ (Pillow + PyMuPDF for figure extraction).
+[tool.uv]
+package = false

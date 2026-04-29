@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screener — Paper Explainer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+  <style>
+    :root {
+      --bg: #f3ede3; --card: #faf6ef; --border: #e4d9c8;
+      --text: #1c150e; --muted: #7a6a58; --subtle: #b0a090;
+      --hover: #b07d3c;
+      --accent-blue: #4a7296; --accent-mauve: #7a5c96;
+      --accent-sage: #3d7858; --accent-amber: #a06c24;
+      --metric-bg: #f0e8d8; --metric-border: #e0d0b8;
+      --header-grad: linear-gradient(135deg, #f0e6d4, #e8dcc8);
+      --tldr-grad: linear-gradient(to bottom, #4a7296, #7a5c96);
+      --tier1-border: #b07d3c; --tier1-bg: #f7e9d2;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1612; --card: #25201a; --border: #3a3128;
+        --text: #f0e8d8; --muted: #b0a090; --subtle: #786858;
+        --metric-bg: #2c2620; --metric-border: #4a3f30;
+        --header-grad: linear-gradient(135deg, #2a241c, #1f1810);
+        --tier1-bg: #3a2c18;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6; padding: 32px 24px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .page { max-width: 960px; margin: 0 auto; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px 24px; margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(80,60,30,0.06);
+    }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #8a7764; margin-bottom: 12px;
+    }
+    @media (prefers-color-scheme: dark) { .section-label { color: #b0a090; } }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+    .badge {
+      display: inline-flex; align-items: center; border-radius: 20px;
+      padding: 3px 10px; font-size: 12px; text-decoration: none;
+      border: 1px solid #c8b8a0; color: var(--muted);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .badge:hover { border-color: var(--hover); color: var(--text); }
+    .badge.sage { border-color: #4a8060; color: #2e5f40; }
+    .badge.blue { border-color: var(--accent-blue); color: #2a4f70; }
+    @media (prefers-color-scheme: dark) {
+      .badge.sage { color: #7ac08d; } .badge.blue { color: #80a8d0; }
+    }
+    .copy-btn {
+      cursor: pointer; background: transparent; font: inherit;
+      border-radius: 20px; padding: 3px 10px; font-size: 12px;
+      border: 1px solid #c8b8a0; color: var(--muted);
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .copy-btn:hover { border-color: var(--hover); color: var(--text); }
+    .copy-btn.copied { background: #d4e4d4; border-color: #4a8060; color: #2e5f40; }
+    .bullet-list { list-style: none; padding-left: 14px; }
+    .bullet-list li {
+      position: relative; margin-bottom: 9px;
+      font-size: 14px; line-height: 1.55; color: var(--text);
+    }
+    .bullet-list li::before {
+      content: ''; position: absolute; left: -14px; top: 10px;
+      width: 5px; height: 5px; background: var(--accent-blue);
+      border-radius: 1px;
+    }
+    .anchor { color: var(--subtle); font-size: 12px; font-style: italic; margin-left: 4px; white-space: nowrap; }
+    .eq-row { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--border); }
+    .eq-row:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 14px; }
+    .eq-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent-blue);
+      margin-bottom: 6px;
+    }
+    .eq-display { margin: 10px 0; overflow-x: auto; }
+    .eq-quote, .paper-quote blockquote {
+      font-size: 13px; font-style: italic; color: var(--muted);
+      line-height: 1.55; margin: 8px 0 0;
+      padding: 6px 12px; border-left: 2px solid var(--border);
+    }
+    .paper-quote { margin: 12px 0; }
+    .paper-quote:last-child { margin-bottom: 0; }
+    .paper-quote .quote-anchor {
+      display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+    }
+    .paper-quote blockquote { margin: 0; }
+    .metrics-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+    .metric-card {
+      background: var(--metric-bg); border: 1px solid var(--metric-border);
+      border-radius: 8px; padding: 14px 16px; min-width: 140px; flex: 1;
+      transition: border-color 0.15s;
+    }
+    .metric-card:hover { border-color: var(--hover); }
+    .metric-value { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+    .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #8a7764; margin-top: 6px; }
+    .metric-context { font-size: 11px; color: var(--subtle); font-style: italic; margin-top: 3px; }
+    .nuance-list { list-style: none; }
+    .nuance-list li {
+      padding: 10px 12px; margin-bottom: 8px; font-size: 13px;
+      background: rgba(160,108,36,0.06); border-left: 3px solid var(--accent-amber);
+      border-radius: 0 6px 6px 0; line-height: 1.55;
+    }
+    .nuance-list li strong { color: var(--accent-amber); }
+    @media (prefers-color-scheme: dark) {
+      .nuance-list li { background: rgba(208,156,84,0.08); }
+      .nuance-list li strong { color: #d09c54; }
+    }
+    .tier-row { margin-bottom: 14px; }
+    .tier-row:last-child { margin-bottom: 0; }
+    .tier-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8a7764; margin-bottom: 8px; }
+    @media (prefers-color-scheme: dark) { .tier-label { color: #b0a090; } }
+    .refs-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ref-chip {
+      font-size: 12px; background: var(--metric-bg); border: 1px solid var(--metric-border);
+      border-radius: 20px; padding: 4px 12px; text-decoration: none;
+      color: var(--muted); transition: border-color 0.15s, color 0.15s; white-space: nowrap;
+    }
+    .ref-chip:hover { border-color: var(--hover); color: var(--text); }
+    .ref-chip.tier1 { font-size: 13px; padding: 5px 14px; border-color: var(--tier1-border); color: var(--text); background: var(--tier1-bg); font-weight: 500; }
+    .ref-chip.tier3 { color: #a09080; border-color: #ece0cc; }
+    @media (prefers-color-scheme: dark) {
+      .ref-chip.tier3 { color: #786858; border-color: #2c241c; }
+    }
+    .rw-entry { margin-bottom: 10px; }
+    .rw-entry:last-child { margin-bottom: 0; }
+    .rw-title { font-weight: 600; font-size: 13px; color: var(--text); }
+    .rw-link { font-size: 11px; color: var(--accent-blue); text-decoration: none; margin-left: 5px; }
+    .rw-link:hover { text-decoration: underline; }
+    .rw-desc { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+    .real-fig { display: block; max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--border); margin-top: 4px; }
+    @media print {
+      body { background: white !important; color: black; padding: 16px; }
+      .card { box-shadow: none !important; break-inside: avoid; background: white !important; }
+      .no-print, .copy-btn { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="card" style="background: var(--header-grad);">
+    <h1 style="font-size: clamp(18px, 3vw, 27px); font-weight: 700; line-height: 1.3; margin-bottom: 10px;">
+      Screener: Self-supervised Pathology Segmentation in Medical CT Images
+    </h1>
+    <p style="font-size: 13px; color: var(--muted); margin-bottom: 14px;">
+      Mikhail Goncharov, Eugenia Soboleva, Mariia Donskova, Daniil Ignatyev <em>et&nbsp;al.</em> &middot; IRA-Labs &middot; Inst. of Numerical Mathematics &middot; MSU &middot; MBZUAI
+    </p>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+      <span class="badge">v2 &middot; Sep 2025</span>
+      <span class="badge">cs.CV</span>
+      <span class="badge">ICLR 2026</span>
+      <a href="https://arxiv.org/abs/2502.08321" target="_blank" class="badge blue">arXiv 2502.08321</a>
+      <a href="https://github.com/mishgon/screener" target="_blank" class="badge sage">&#x2328;&#xfe0e; mishgon/screener</a>
+      <a href="https://openreview.net/forum?id=fNyfV5otuV" target="_blank" class="badge">OpenReview</a>
+      <span class="badge" title="Estimated from body word count">~22 min read</span>
+      <button class="copy-btn no-print" id="copy-bib" title="Copy BibTeX to clipboard">copy bibtex</button>
+    </div>
+  </div>
+
+  <!-- TL;DR -->
+  <div class="card" style="border-left: 4px solid transparent; border-image: var(--tldr-grad) 1;">
+    <div class="section-label" style="color: var(--accent-blue);">TL;DR</div>
+    <p style="font-size: 18px; line-height: 1.65;">
+      Supervised pathology segmentation only finds the few classes someone has labeled. Screener flips the framing: <em>any</em> pathology is a statistical anomaly relative to healthy tissue, so train a density model $q(y \mid c)$ on dense self-supervised CT embeddings and call low-density regions abnormal. Two ingredients make density-based UVAS work for medical CT for the first time: (1) replace ImageNet/STU-Net feature extractors with a 3D UNet trained via dense SSL (DenseInfoNCE / DenseVICReg, &sect;3.1) &mdash; supervised features are <em>actively harmful</em> here (Tab.&nbsp;4); (2) replace sin-cos / anatomical positional encodings with a <em>masking-invariant</em> condition $c[p]$ learned the same way as the descriptor but with random masking augmentations (&sect;3.2). The masking trick simplifies $q(y \mid c)$ enough that a diagonal Gaussian density matches a Glow normalizing flow (Tab.&nbsp;3). Trained on 30k+ unlabeled CT volumes; voxel AUROC <strong>0.96 / 0.87 / 0.90 / 0.93</strong> on LIDC / MIDRC / KiTS / LiTS unsupervised, and a <strong>+49% Dice gain</strong> over nnUNet when fine-tuned with 25 cases (Tab.&nbsp;1&ndash;2).
+    </p>
+  </div>
+
+  <!-- PROBLEM + METHOD -->
+  <div class="two-col">
+    <div class="card" style="margin-bottom:0;">
+      <div class="section-label">The Problem</div>
+      <ul class="bullet-list">
+        <li>Supervised CT segmentation only detects pathology classes that exist in someone's labeled dataset; many real pathologies (e.g. pneumothorax) stay unlabeled <span class="anchor">&sect;1, Fig. 1</span></li>
+        <li>Reconstruction-based UVAS overfits to anomalies in uncurated training data; synthetic-anomaly methods fail to generalize to real pathology appearance <span class="anchor">&sect;2.1, App. H</span></li>
+        <li>Density-based UVAS is the right framing &mdash; assumes anomalies are <em>rare</em>, not <em>absent</em> &mdash; but its descriptor has been an ImageNet CNN, which fails on CT due to domain shift <span class="anchor">&sect;1, Tab. 4</span></li>
+        <li>Counter-intuitive: swapping ImageNet for a <em>medically</em> supervised encoder (STU-Net) makes things <em>worse</em> &mdash; AUROC 0.52 on LIDC vs ImageNet's 0.70 &mdash; features over-fit to organs <span class="anchor">&sect;1, Tab. 4</span></li>
+        <li>Existing density-based methods condition $q(y \mid c)$ on hand-crafted sin-cos positional encodings &mdash; useless when CT scans aren't anatomically aligned <span class="anchor">&sect;2.1, App. C</span></li>
+      </ul>
+    </div>
+    <div class="card" style="margin-bottom:0;">
+      <div class="section-label">The Method</div>
+      <ul class="bullet-list">
+        <li><strong style="color:#7a4c10;">Descriptor model</strong>: 3D UNet $f_{\theta^\text{desc}}$ trained at full resolution via dense SSL (DenseInfoNCE or DenseVICReg) &mdash; positive pairs are voxels at the same anatomical position across two augmented crops <span class="anchor">&sect;3.1, App. B</span></li>
+        <li><strong style="color:#5a3c78;">Condition model (NEW)</strong>: same UNet trained the same way as the descriptor, but with <em>random image masking</em> as an extra augmentation. The condition $c[p]$ becomes invariant to local pathology while encoding global anatomy / patient context <span class="anchor">&sect;3.2</span></li>
+        <li><strong style="color:#2a5f78;">Density model</strong>: $q_{\theta^\text{dens}}(y \mid c)$ learned by NLL minimization. Parameterized as a diagonal Gaussian or a Glow-style normalizing flow. Anomaly score is $-\log q(y[p] \mid c[p])$ at every voxel <span class="anchor">&sect;3.3, App. D</span></li>
+        <li><strong style="color:#3d7858;">Distillation pipeline</strong>: distill the modular descriptor + condition + density stack into a single regression UNet via MSE on score maps. The distilled model becomes a <em>self-supervised pretraining</em> for downstream supervised fine-tuning <span class="anchor">&sect;3.4</span></li>
+        <li><strong>Training scale &amp; preprocessing</strong>: 30k+ unlabeled CT volumes (NLST + AMOS + AbdomenAtlas); CLAHE preprocessing is critical &mdash; without it, color jitter erases the pathology signal; 3 days each on a single H100 for descriptor + condition + density <span class="anchor">App. F</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CORE DIAGRAM -->
+  <div class="card">
+    <div class="section-label">How It Works &mdash; Screener Pipeline</div>
+    <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">A simplified mental model of the modular UVAS framework. Architecture details in <strong>&sect;3</strong> and Fig.&nbsp;2 of the paper.</p>
+    <svg width="100%" viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" style="display:block; border-radius:8px; overflow:hidden;">
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M40 0L0 0 0 40" fill="none" stroke="#c8b89a" stroke-width="0.5" opacity="0.35"/>
+        </pattern>
+        <linearGradient id="gd" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1a4870"/><stop offset="100%" stop-color="#4a8fc0"/>
+        </linearGradient>
+        <linearGradient id="gc" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#4a2870"/><stop offset="100%" stop-color="#8060c0"/>
+        </linearGradient>
+        <linearGradient id="gq" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0d4848"/><stop offset="100%" stop-color="#3a9090"/>
+        </linearGradient>
+        <linearGradient id="gi" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1a4a2e"/><stop offset="100%" stop-color="#4a9060"/>
+        </linearGradient>
+        <linearGradient id="ga" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#5a3000"/><stop offset="100%" stop-color="#b07828"/>
+        </linearGradient>
+        <marker id="arr"   markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#8a7864"/></marker>
+        <marker id="arr-q" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#2a7878"/></marker>
+        <marker id="arr-a" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5z" fill="#a06820"/></marker>
+      </defs>
+
+      <rect width="900" height="420" fill="#f0e8d6"/>
+      <rect width="900" height="420" fill="url(#grid)"/>
+
+      <!-- Input volume node -->
+      <rect x="360" y="16" width="180" height="36" rx="18" fill="url(#gi)"/>
+      <text x="450" y="34" text-anchor="middle" fill="#e8f5ee" font-size="11" font-weight="700">Input CT volume x</text>
+      <text x="450" y="47" text-anchor="middle" fill="#a8c8b0" font-size="9.5">H &times; W &times; S &middot; 30k+ unlabeled</text>
+
+      <!-- Augment edges -->
+      <line x1="380" y1="52" x2="220" y2="76" stroke="#8a7864" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="520" y1="52" x2="680" y2="76" stroke="#8a7864" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Augment labels -->
+      <rect x="220" y="52" width="160" height="14" rx="3" fill="#0a1a2a"/>
+      <text x="300" y="63" text-anchor="middle" fill="#80b8e0" font-size="9" font-weight="700">augm: crop + jitter</text>
+      <rect x="520" y="52" width="190" height="14" rx="3" fill="#1a0838"/>
+      <text x="615" y="63" text-anchor="middle" fill="#c0a0e8" font-size="9" font-weight="700">augm: crop + jitter + MASKING</text>
+
+      <text x="180" y="84" text-anchor="middle" fill="#4a7296" font-size="9.5" font-weight="700" letter-spacing="0.08em">DESCRIPTOR &middot; DENSE SSL</text>
+
+      <!-- Descriptor model -->
+      <rect x="60" y="92" width="240" height="74" rx="10" fill="url(#gd)"/>
+      <text x="180" y="116" text-anchor="middle" fill="#f0eae0" font-size="14" font-weight="700">Descriptor UNet f&#x209c;</text>
+      <text x="180" y="134" text-anchor="middle" fill="#c0d4e8" font-size="10">3D UNet &middot; full-resolution output</text>
+      <text x="180" y="149" text-anchor="middle" fill="#a0bcd0" font-size="9.5">DenseInfoNCE / DenseVICReg</text>
+      <text x="180" y="163" text-anchor="middle" fill="#90a8c0" font-size="9.5">positive pair = same voxel, 2 crops</text>
+
+      <line x1="180" y1="166" x2="180" y2="178" stroke="#8a7864" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Descriptor output -->
+      <rect x="100" y="180" width="160" height="38" rx="8" fill="#d4e4f0" stroke="#3a6898" stroke-width="1.5"/>
+      <text x="180" y="198" text-anchor="middle" fill="#1a2c40" font-size="11" font-weight="600">y[p] &isin; &#x211d;&#x1d48;</text>
+      <text x="180" y="212" text-anchor="middle" fill="#4a6880" font-size="9.5">descriptor &middot; d=32</text>
+
+      <text x="720" y="84" text-anchor="middle" fill="#7a5c96" font-size="9.5" font-weight="700" letter-spacing="0.08em">CONDITION &middot; MASKING-INVARIANT</text>
+
+      <!-- Condition model -->
+      <rect x="600" y="92" width="240" height="74" rx="10" fill="url(#gc)"/>
+      <text x="720" y="116" text-anchor="middle" fill="#f0eae0" font-size="14" font-weight="700">Condition UNet g&#x1d04;</text>
+      <text x="720" y="134" text-anchor="middle" fill="#d8c8e8" font-size="10">same arch + masking augm</text>
+      <text x="720" y="149" text-anchor="middle" fill="#b8a0d0" font-size="9.5">invariant to local anomaly</text>
+      <text x="720" y="163" text-anchor="middle" fill="#a890c0" font-size="9.5">captures anatomy + patient ctx</text>
+
+      <line x1="720" y1="166" x2="720" y2="178" stroke="#8a7864" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Condition output -->
+      <rect x="640" y="180" width="160" height="38" rx="8" fill="#e0d4f0" stroke="#6040a0" stroke-width="1.5"/>
+      <text x="720" y="198" text-anchor="middle" fill="#1a0830" font-size="11" font-weight="600">c[p] &isin; &#x211d;&#x1d48;</text>
+      <text x="720" y="212" text-anchor="middle" fill="#6040a0" font-size="9.5">condition</text>
+
+      <line x1="180" y1="218" x2="240" y2="246" stroke="#8a7864" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="720" y1="218" x2="660" y2="246" stroke="#8a7864" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Density model -->
+      <rect x="190" y="246" width="520" height="86" rx="10" fill="url(#gq)"/>
+      <text x="450" y="270" text-anchor="middle" fill="#f0eae0" font-size="14" font-weight="700">Density model q&#x3b8;(y | c)</text>
+      <text x="450" y="290" text-anchor="middle" fill="#b0d8d8" font-size="11">trained: min &sum; &minus;log q&#x3b8;(y[p] | c[p])</text>
+      <text x="450" y="307" text-anchor="middle" fill="#88c0c0" font-size="10">parameterized as Gaussian or Glow normalizing flow</text>
+      <text x="450" y="322" text-anchor="middle" fill="#88c0c0" font-size="10">w/ masking-inv. cond, Gaussian matches NF (Tab. 3)</text>
+
+      <line x1="450" y1="332" x2="450" y2="348" stroke="#8a7864" stroke-width="1.5" marker-end="url(#arr-q)"/>
+
+      <!-- Anomaly score node -->
+      <rect x="270" y="350" width="360" height="32" rx="16" fill="url(#ga)" opacity="0.94"/>
+      <text x="450" y="370" text-anchor="middle" fill="#fff5e0" font-size="11" font-weight="700">Anomaly score = &minus;log q(y[p] | c[p])</text>
+
+      <!-- Distill arrow -->
+      <line x1="630" y1="365" x2="800" y2="365" stroke="#a06820" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-a)"/>
+      <text x="715" y="358" text-anchor="middle" fill="#a06820" font-size="9" font-weight="700">distill &rarr; UNet</text>
+      <text x="715" y="376" text-anchor="middle" fill="#8a7864" font-size="8.5">SSL pretraining for fine-tuning</text>
+
+      <line x1="20" y1="392" x2="880" y2="392" stroke="#c8b89a" stroke-width="0.7" opacity="0.6"/>
+
+      <!-- Bottom 3-column legend -->
+      <text x="180" y="404" text-anchor="middle" fill="#4a7296" font-size="9" font-weight="700">discriminative descriptors</text>
+      <text x="180" y="416" text-anchor="middle" fill="#8a7864" font-size="8.5">replaces ImageNet / STU-Net</text>
+
+      <text x="450" y="404" text-anchor="middle" fill="#2a7878" font-size="9" font-weight="700">density-based anomaly</text>
+      <text x="450" y="416" text-anchor="middle" fill="#8a7864" font-size="8.5">low density = pathology</text>
+
+      <text x="720" y="404" text-anchor="middle" fill="#7a5c96" font-size="9" font-weight="700">masking-invariance trick</text>
+      <text x="720" y="416" text-anchor="middle" fill="#8a7864" font-size="8.5">simplifies q(y|c) so Gaussian works</text>
+    </svg>
+    <p style="font-size: 13px; color: var(--muted); margin-top: 14px; line-height: 1.55;">
+      Two UNets are trained the same way via dense SSL &mdash; positive pairs of voxel embeddings across augmented crops &mdash; but the <em>condition</em> UNet adds a random-masking augmentation. That forces $c[p]$ to be predictable from the unmasked context, hence ignorant of local anomalies. The density model then learns $q(y \mid c)$ from descriptor + condition pairs on healthy and unhealthy CT volumes alike. At inference, $-\log q(y[p] \mid c[p])$ is the per-voxel anomaly score &mdash; high where the descriptor lands in a low-density region given its anatomical context.
+    </p>
+  </div>
+
+  <!-- KEY EQUATIONS & QUOTES -->
+  <div class="card">
+    <div class="section-label">Key Equations &amp; Quotes</div>
+
+    <div class="eq-row">
+      <div class="eq-label">Anomaly score (&sect;3.3, applied per-voxel)</div>
+      <div class="eq-display">$$\text{score}(p) \;=\; -\log q_{\theta^{\text{dens}}}\!\bigl(\mathbf{y}[p] \,\big|\, \mathbf{c}[p]\bigr)$$</div>
+      <p class="eq-quote">"<em>The conditional density model $q_{\theta^{\text{dens}}}(y \mid c)$ can be viewed as a predictive model, which tries to predict descriptors based on the corresponding conditions. In this interpretation, anomaly scores $\{-\log q_{\theta^{\text{dens}}}(\mathbf{y}[p] \mid \mathbf{c}[p])\}_{p \in P}$ are position-wise prediction errors.</em>" &mdash; &sect;3.3</p>
+    </div>
+
+    <div class="eq-row">
+      <div class="eq-label">Descriptor matching distance &mdash; DenseInfoNCE (App. B, Eq. 1)</div>
+      <div class="eq-display">$$\min_{\theta} \;\; \sum_{i=1}^{N}\!\sum_{k\in\{1,2\}} -\log \frac{\exp\!\bigl(\langle z^{(1)}_{i}, z^{(2)}_{i}\rangle/\tau\bigr)}{\exp\!\bigl(\langle z^{(1)}_{i}, z^{(2)}_{i}\rangle/\tau\bigr) + \sum_{j \neq i}\sum_{l\in\{1,2\}}\exp\!\bigl(\langle z^{(k)}_{i}, z^{(l)}_{j}\rangle/\tau\bigr)}$$</div>
+      <p class="eq-quote">"<em>From the overlapping region of the two crops, we randomly select $n$ positions ... These descriptors form a positive pair, as they correspond to the same position in the original volume but are predicted from different augmentations.</em>" &mdash; &sect;3.1</p>
+    </div>
+
+    <div class="eq-row">
+      <div class="eq-label">Auxiliary segmentation (distillation) loss (&sect;3.4)</div>
+      <div class="eq-display">$$\mathcal{L}_\text{distill} \;=\; \mathbb{E}_{x}\,\bigl\|\, h_{\phi}(x) \;-\; \bigl(-\log q_{\theta^{\text{dens}}}(f_{\theta^{\text{desc}}}(x) \mid g_{\theta^{\text{cond}}}(x))\bigr)\,\bigr\|_2^{2}$$</div>
+      <p class="eq-quote">"<em>We sample random image crops, pass them through the pretrained modular Screener to obtain ground truth anomaly score maps ... We then train a regression UNet model (last conv has one output channel without activation) to predict these score maps directly from the input image crops using a simple MSE loss.</em>" &mdash; &sect;3.4</p>
+    </div>
+
+    <div class="paper-quote">
+      <div class="quote-anchor">&sect;1 &mdash; The core framing</div>
+      <blockquote>"<em>Our core assumption is that pathological patterns are statistically rarer than healthy patterns in CT images. This frames pathology segmentation as an unsupervised visual anomaly segmentation (UVAS) problem.</em>"</blockquote>
+    </div>
+
+    <div class="paper-quote">
+      <div class="quote-anchor">&sect;3.2 &mdash; Why masking-invariance works</div>
+      <blockquote>"<em>The architecture and training procedure for the condition model $g_{\theta^{\text{cond}}}$ are exactly the same as those for the descriptor model, with the sole difference: random masking as an additional augmentation. ... the learned condition feature maps are designed to be invariant to the presence / absence of anomalies.</em>"</blockquote>
+    </div>
+
+    <div class="paper-quote">
+      <div class="quote-anchor">&sect;1 &mdash; Why supervised features fail</div>
+      <blockquote>"<em>Supervised medical encoders like STU-Net might seem viable, but our experiments show they also underperform, likely because their features are too specific and lack discriminative information for pathology segmentation.</em>"</blockquote>
+    </div>
+
+    <div class="paper-quote">
+      <div class="quote-anchor">App. F &mdash; Why CLAHE preprocessing is load-bearing</div>
+      <blockquote>"<em>CLAHE ensures that color jitter augmentations preserve information about presence of pathologies during descriptor model training (otherwise, the quality of our method degrades largely).</em>"</blockquote>
+    </div>
+  </div>
+
+  <!-- FROM THE PAPER -->
+  <div class="card">
+    <div class="section-label">From the Paper &middot; Fig. 1 (qualitative results)</div>
+    <img src="figure.png"
+         alt="Three rows of axial CT slices, six columns each: top row is the input CT image, middle row is the binary ground-truth pathology mask (only the labeled class per dataset), bottom row is Screener's predicted heatmap with red=high anomaly score. A yellow callout in column 2 highlights a pneumothorax that is unannotated in the ground-truth mask but correctly detected by Screener."
+         class="real-fig" loading="lazy">
+    <p style="font-size: 12px; color: var(--muted); margin-top: 8px; font-style: italic;">
+      Reproduced from <a href="https://arxiv.org/abs/2502.08321" style="color: var(--accent-blue); text-decoration: none;">arXiv:2502.08321</a>, Fig.&nbsp;1. Complements the SVG above: the SVG only labels symbolically what an "anomaly map" is &mdash; this figure shows what those maps actually look like and why Dice scores systematically <em>under</em>-estimate Screener's true positives (App.&nbsp;A).
+    </p>
+  </div>
+
+  <!-- KEY RESULTS -->
+  <div class="card">
+    <div class="section-label">Key Results</div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value" style="color:#2e5f3e;">0.96</div>
+        <div class="metric-label">AUROC, LIDC unsup.</div>
+        <div class="metric-context">vs 0.87 next-best (Patched Diff.) &middot; Tab. 1</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:#2e5f3e;">0.93</div>
+        <div class="metric-label">AUROC, LiTS unsup.</div>
+        <div class="metric-context">+0.10 over best baseline &middot; Tab. 1</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:#7a4c10;">+49%</div>
+        <div class="metric-label">Dice gain, LIDC FT</div>
+        <div class="metric-context">0.31 vs nnUNet 0.21 &middot; 25 cases &middot; Tab. 2</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:#2a4f70;">30k+</div>
+        <div class="metric-label">unlabeled CT volumes</div>
+        <div class="metric-context">NLST + AMOS + AbdomenAtlas &middot; App. E</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:#2a4f70;">133M</div>
+        <div class="metric-label">params (modular)</div>
+        <div class="metric-context">350M after distillation &middot; 5&ndash;10s/vol on H100 &middot; App. F</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:#2e5f3e;">Gauss &asymp; NF</div>
+        <div class="metric-label">w/ masking-inv. cond.</div>
+        <div class="metric-context">0.96/0.84/0.87/0.90 (Gauss) vs 0.96/0.87/0.90/0.93 (NF) &middot; Tab. 3</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NUANCES -->
+  <div class="card">
+    <div class="section-label">What Most Summaries Miss</div>
+    <ul class="nuance-list">
+      <li><strong>Dice scores are systematically under-estimated, not the model's fault.</strong> Test datasets only label the headline pathology (lung cancer / pneumonia / kidney tumor / liver tumor), but Screener detects <em>everything</em> rare. App.&nbsp;A explicitly demonstrates true positives (e.g., the pneumothorax in Fig.&nbsp;1) being counted as false positives. The honest metric is voxel-level AUROC sampled over labeled-pathology voxels and out-of-mask normal voxels &mdash; that's why the paper headlines AUROC, not Dice. <span class="anchor">&sect;4.1, App. A</span></li>
+      <li><strong>Supervised medical pretraining is <em>actively harmful</em> for this task.</strong> STU-Net (supervised on anatomical-structure segmentation) gets AUROC <em>0.52</em>/0.44/0.52/0.64 &mdash; <em>below</em> ImageNet ResNet50 (0.70/0.66/0.64/0.64) on the same density-based pipeline (Tab.&nbsp;4). The supervised features become organ-shape detectors, losing the discriminative noise needed to flag pathologies. The dense-SSL features keep that signal. <span class="anchor">Tab. 4</span></li>
+      <li><strong>The masking-invariance trick is a model-simplicity win, not just an accuracy win.</strong> Tab.&nbsp;3: with a fixed DenseVICReg descriptor, sin-cos / APE conditioning <em>requires</em> a Glow normalizing flow to hit AUROC 0.96/0.89/0.90/0.94. With masking-invariant conditions, a diagonal Gaussian density gets to 0.96/0.84/0.87/0.90 &mdash; competitive with the NF, with one MLP for $\mu(c)$ and $\Sigma(c)$ instead of an invertible network with act-norms, 1&times;1 convs and affine couplings. <span class="anchor">Tab. 3, App. D</span></li>
+      <li><strong>CLAHE preprocessing is load-bearing, and the auxiliary input is the mask itself.</strong> App.&nbsp;F is unambiguous: without CLAHE, "<em>the quality of our method degrades largely</em>" because color jitter erases the very signal you want to detect. The condition model also concatenates the binary mask as a second input channel (`in_channels + 1` in <code>condition_model.py</code>), telling the network exactly what's been hidden &mdash; the masking-invariance is engineered, not just emergent. <span class="anchor">App. F, code</span></li>
+      <li><strong>Reconstruction-based methods get <em>worse</em> with training.</strong> Patched Diffusion (App.&nbsp;H, Fig.&nbsp;8): at 1 epoch the model can't reconstruct pathologies (great for detection), but by 7 epochs it learns to reconstruct them too (anomaly signal vanishes). Autoencoders fail in the same direction (App.&nbsp;H, Fig.&nbsp;7) but for different reasons &mdash; they overfit while also producing blurry reconstructions of normal fine details. This is why Screener invests in density modeling, not reconstruction. <span class="anchor">App. H</span></li>
+      <li><strong>Train/test domain shift is real but mostly absorbed.</strong> Training is on lung-screening (NLST) + abdominal (AMOS, AbdomenAtlas) volumes, but evaluation includes COVID chest CTs (MIDRC) and kidney/liver tumor CTs &mdash; which include patient cohorts and contrast conditions never seen at training. App.&nbsp;G's robustness study quantifies a measurable but small AUROC drop on low-dose vs high-dose and contrast vs non-contrast LIDC subsets; the paper frames this as preliminary. <span class="anchor">App. G, Fig. 5</span></li>
+      <li><strong>Honest limitations the abstract doesn't dwell on.</strong> The rarity assumption breaks for <em>common</em> pathologies (false negatives) and <em>statistical</em> anomalies that aren't clinical (artifacts &rarr; false positives, e.g. the second row of App.&nbsp;G Fig.&nbsp;6). Validated only on CT &mdash; transfer to MRI / X-ray is future work, and scaling laws (model + data) are explicitly listed as open questions. <span class="anchor">&sect;6 limitations</span></li>
+    </ul>
+  </div>
+
+  <!-- CONTRIBUTIONS + RELATED WORK -->
+  <div class="two-col">
+    <div class="card" style="margin-bottom:0;">
+      <div class="section-label">Key Contributions</div>
+      <ul class="bullet-list">
+        <li><strong style="color:#7a4c10;">Dense SSL features for density-based UVAS</strong>: replace ImageNet / supervised medical encoders with a domain-specific 3D UNet trained at full resolution via DenseInfoNCE or DenseVICReg <span class="anchor">&sect;3.1, App. B</span></li>
+        <li><strong style="color:#5a3c78;">Masking-invariant learned conditioning</strong>: the first SSL-learned condition for UVAS that captures global anatomy/patient context while staying ignorant of local anomalies. Simplifies $q(y \mid c)$ enough that a diagonal Gaussian matches a normalizing flow <span class="anchor">&sect;3.2, Tab. 3</span></li>
+        <li><strong style="color:#2a5f78;">First large-scale UVAS evaluation in CT</strong>: 1,820 test scans across LIDC, MIDRC-RICORD, KiTS, LiTS &mdash; SOTA AUROC across all four <span class="anchor">&sect;4.1, Tab. 1</span></li>
+        <li><strong style="color:#3d7858;">A new self-supervised pretraining recipe</strong>: distill the modular UVAS pipeline into a single UNet via MSE on score maps. The resulting checkpoint matches VoCo and beats Model Genesis / SwinUNETR / DAE on 25-case fine-tuning <span class="anchor">&sect;3.4, &sect;4.2, Tab. 2</span></li>
+      </ul>
+    </div>
+    <div class="card" style="margin-bottom:0;">
+      <div class="section-label">Related Work</div>
+      <div class="rw-entry">
+        <div class="rw-title">CFLow-AD (Gudovskiy et al., WACV 2022)<a href="https://arxiv.org/abs/2107.12571" target="_blank" class="rw-link">2107.12571</a></div>
+        <div class="rw-desc">Direct predecessor &mdash; the conditional normalizing-flow UVAS framework Screener inherits and improves. Uses sin-cos positional encodings as conditions; Screener replaces them with masking-invariant SSL conditions.</div>
+      </div>
+      <div class="rw-entry">
+        <div class="rw-title">MSFlow (Zhou et al., TNNLS 2024)<a href="https://arxiv.org/abs/2308.15300" target="_blank" class="rw-link">2308.15300</a></div>
+        <div class="rw-desc">Recent multi-scale flow-based UVAS, top-5 on MVTec-AD. Uses ImageNet features &mdash; included in Tab.&nbsp;1 as a baseline (AUROC 0.71/0.67/0.63/0.63 on CT) to show natural-image features fail in CT.</div>
+      </div>
+      <div class="rw-entry">
+        <div class="rw-title">VoCo (Wu et al., CVPR 2024)<a href="https://arxiv.org/abs/2402.17300" target="_blank" class="rw-link">2402.17300</a></div>
+        <div class="rw-desc">Contrastive 3D medical SSL based on volume-region predictions. Strongest competing pretrained model at fine-tuning time; Screener matches or beats it across LIDC / LiTS (Tab.&nbsp;2).</div>
+      </div>
+      <div class="rw-entry">
+        <div class="rw-title">DenseCL / VICRegL (Wang 2021 / Bardes 2022)<a href="https://arxiv.org/abs/2011.09157" target="_blank" class="rw-link">2011.09157</a></div>
+        <div class="rw-desc">Origins of dense SSL &mdash; voxel/pixel-level positive pairs across augmented crops. Screener adapts these objectives to 3D medical and adds masking augmentation for the condition model.</div>
+      </div>
+      <div class="rw-entry">
+        <div class="rw-title">Patched Diffusion Model (Behrendt et al., MIDL 2024)<a href="https://arxiv.org/abs/2303.03758" target="_blank" class="rw-link">2303.03758</a></div>
+        <div class="rw-desc">Strongest reconstruction-based medical UVAS baseline. App.&nbsp;H shows it overfits to anomalies during training, losing detection ability after 7 epochs &mdash; exactly the failure mode density-based methods avoid.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIERED CHIPS -->
+  <div class="card" style="margin-top:16px;">
+    <div class="section-label">Related Papers</div>
+    <div class="tier-row">
+      <div class="tier-label">Directly Comparable &mdash; UVAS / Dense SSL / Medical UVAS</div>
+      <div class="refs-grid">
+        <a href="https://arxiv.org/abs/2107.12571" target="_blank" class="ref-chip tier1" title="CFLow-AD: real-time UVAS via conditional normalizing flows on ImageNet features. Direct predecessor framework.">CFLow-AD &mdash; Gudovskiy et al. (2022)</a>
+        <a href="https://arxiv.org/abs/2308.15300" target="_blank" class="ref-chip tier1" title="MSFlow: multi-scale flow UVAS, top-5 on MVTec-AD. Tab. 1 baseline; AUROC 0.71/0.67/0.63/0.63 on CT.">MSFlow &mdash; Zhou et al. (2024)</a>
+        <a href="https://arxiv.org/abs/2402.17300" target="_blank" class="ref-chip tier1" title="VoCo: 3D medical SSL via volume contrastive learning. Strongest fine-tuning competitor in Tab. 2.">VoCo &mdash; Wu et al. (2024)</a>
+        <a href="https://arxiv.org/abs/2011.09157" target="_blank" class="ref-chip tier1" title="DenseCL: pixel-level contrastive SSL via positive pairs at the same image position across crops.">DenseCL &mdash; Wang et al. (2021)</a>
+        <a href="https://arxiv.org/abs/2210.01571" target="_blank" class="ref-chip tier1" title="VICRegL: local VICReg formulation for dense SSL; basis for Screener's DenseVICReg objective.">VICRegL &mdash; Bardes et al. (2022)</a>
+        <a href="https://arxiv.org/abs/2011.05499" target="_blank" class="ref-chip tier1" title="VADER: original unsupervised dense visual representations; positive pairs at pixel level.">VADER &mdash; Pinheiro et al. (2020)</a>
+        <a href="https://arxiv.org/abs/2303.03758" target="_blank" class="ref-chip tier1" title="Patched Diffusion: best reconstruction-based UVAS baseline; overfits to pathologies after 7 epochs (App. H).">Patched Diffusion &mdash; Behrendt et al. (2024)</a>
+        <a href="https://arxiv.org/abs/2308.01412" target="_blank" class="ref-chip tier1" title="MOOD-Top1: synthetics-based UVAS; top-1 of MOOD challenge; Tab. 1 baseline at 0.79/0.79/0.77/0.80.">MOOD-Top1 &mdash; Marimont &amp; Tarroni (2023)</a>
+        <a href="https://arxiv.org/abs/2108.07610" target="_blank" class="ref-chip tier1" title="DRAEM: discriminatively trained reconstruction with synthetic anomalies; Tab. 1 baseline.">DRAEM &mdash; Zavrtanik et al. (2021)</a>
+        <a href="https://arxiv.org/abs/2305.15087" target="_blank" class="ref-chip tier1" title="vox2vec: same authors' prior work on 3D voxel contrastive SSL. Predecessor to Screener's descriptor.">vox2vec &mdash; Goncharov et al. (2023)</a>
+        <a href="https://arxiv.org/abs/2409.10291" target="_blank" class="ref-chip tier1" title="APE: anatomical positional embeddings; baseline condition in Tab. 3 (AUROC 0.88/0.80/0.78/0.86 w/ Gaussian).">APE &mdash; Goncharov et al. (2024)</a>
+        <a href="https://arxiv.org/abs/2206.03461" target="_blank" class="ref-chip tier1" title="Pinaya 2022a: diffusion-based brain MRI anomaly detection; cited as related medical UVAS.">Anomaly Diffusion &mdash; Pinaya et al. (2022)</a>
+      </div>
+    </div>
+    <div class="tier-row">
+      <div class="tier-label">Related Methods &mdash; SSL / 3D Medical Pretraining / Density UVAS</div>
+      <div class="refs-grid">
+        <a href="https://arxiv.org/abs/2105.04906" target="_blank" class="ref-chip" title="VICReg: variance-invariance-covariance regularization for SSL; underlies DenseVICReg.">VICReg &mdash; Bardes et al. (2021)</a>
+        <a href="https://arxiv.org/abs/2002.05709" target="_blank" class="ref-chip" title="SimCLR: foundational contrastive SSL with InfoNCE loss; underlies DenseInfoNCE.">SimCLR &mdash; Chen et al. (2020)</a>
+        <a href="https://arxiv.org/abs/2304.06716" target="_blank" class="ref-chip" title="STU-Net: supervised pretrained UNet; AUROC 0.52 on LIDC in Tab. 4 (worse than ImageNet ResNet50).">STU-Net &mdash; Huang et al. (2023)</a>
+        <a href="https://arxiv.org/abs/1809.10486" target="_blank" class="ref-chip" title="nnUNet: self-configuring supervised medical segmentation baseline; random-init Dice in Tab. 2.">nnUNet &mdash; Isensee et al. (2021)</a>
+        <a href="https://arxiv.org/abs/2004.07882" target="_blank" class="ref-chip" title="Model Genesis: foundational 3D medical SSL via reconstruction pretext tasks; Tab. 2 baseline.">Model Genesis &mdash; Zhou et al. (2021)</a>
+        <a href="https://arxiv.org/abs/2111.14791" target="_blank" class="ref-chip" title="SwinUNETR: Swin transformer 3D medical SSL with masked-image and contrastive losses; Tab. 2 baseline.">SwinUNETR &mdash; Tang et al. (2022)</a>
+        <a href="https://arxiv.org/abs/2307.16896" target="_blank" class="ref-chip" title="DAE: disruptive autoencoders for 3D medical pretraining; Tab. 2 baseline.">DAE &mdash; Valanarasu et al. (2023)</a>
+        <a href="https://arxiv.org/abs/1807.02011" target="_blank" class="ref-chip" title="f-AnoGAN: GAN-based unsupervised anomaly detection for medical images; Tab. 1 baseline.">f-AnoGAN &mdash; Schlegl et al. (2019)</a>
+        <a href="https://www.sciencedirect.com/science/article/pii/S1361841520303145" target="_blank" class="ref-chip" title="Baur 2021: comparative study of autoencoders for unsupervised brain MR anomaly segmentation; Tab. 1 baseline.">Autoencoder UVAS &mdash; Baur et al. (2021)</a>
+        <a href="https://arxiv.org/abs/2106.08265" target="_blank" class="ref-chip" title="PatchCore: non-parametric memory-bank density UVAS; cited as alternative density approach.">PatchCore &mdash; Roth et al. (2022)</a>
+        <a href="https://arxiv.org/abs/2111.07677" target="_blank" class="ref-chip" title="FastFlow: 2D normalizing flows for UVAS; predecessor to MSFlow.">FastFlow &mdash; Yu et al. (2021)</a>
+        <a href="https://arxiv.org/abs/1807.03039" target="_blank" class="ref-chip" title="Glow: act-norm + invertible 1x1 conv + affine coupling; the flow architecture used by Screener (App. D).">Glow &mdash; Kingma &amp; Dhariwal (2018)</a>
+      </div>
+    </div>
+    <div class="tier-row">
+      <div class="tier-label">Background &mdash; Datasets, Architectures, Preprocessing</div>
+      <div class="refs-grid">
+        <a href="https://www.thecancerimagingarchive.net/collection/lidc-idri/" target="_blank" class="ref-chip tier3" title="LIDC-IDRI: 1017 lung-cancer CT scans with nodule annotations; eval dataset.">LIDC &mdash; Armato et al. (2011)</a>
+        <a href="https://arxiv.org/abs/1904.00445" target="_blank" class="ref-chip tier3" title="KiTS19: 300 kidney-tumor CT cases; eval dataset.">KiTS &mdash; Heller et al. (2019)</a>
+        <a href="https://arxiv.org/abs/1901.04056" target="_blank" class="ref-chip tier3" title="LiTS: liver tumor segmentation benchmark; eval dataset.">LiTS &mdash; Bilic et al. (2023)</a>
+        <a href="https://www.cancerimagingarchive.net/collection/midrc-ricord-1a/" target="_blank" class="ref-chip tier3" title="MIDRC-RICORD-1a: 115 COVID-positive chest CT scans; eval dataset.">MIDRC-RICORD &mdash; Tsai et al. (2020)</a>
+        <a href="https://pubmed.ncbi.nlm.nih.gov/21045183/" target="_blank" class="ref-chip tier3" title="NLST: National Lung Screening Trial; 25,652 CT volumes for unsupervised training.">NLST &mdash; NLST Research Team (2011)</a>
+        <a href="https://arxiv.org/abs/2206.08023" target="_blank" class="ref-chip tier3" title="AMOS: 2,123 abdominal multi-organ CT scans; training set.">AMOS &mdash; Ji et al. (2022)</a>
+        <a href="https://arxiv.org/abs/2407.16697" target="_blank" class="ref-chip tier3" title="AbdomenAtlas-8K: 8,000 CT volumes annotated for multi-organ segmentation; training set (4607 used).">AbdomenAtlas &mdash; Qu et al. (2024)</a>
+        <a href="https://www.mvtec.com/company/research/datasets/mvtec-ad" target="_blank" class="ref-chip tier3" title="MVTec-AD: industrial-image anomaly detection benchmark; cited as where MSFlow / FastFlow / PatchCore won.">MVTec-AD &mdash; Bergmann et al. (2021)</a>
+        <a href="https://www.synapse.org/#!Synapse:syn21343101" target="_blank" class="ref-chip tier3" title="MOOD: medical out-of-distribution analysis challenge; venue MOOD-Top1 was developed for.">MOOD &mdash; Zimmerer et al. (2022)</a>
+        <a href="https://arxiv.org/abs/1711.05101" target="_blank" class="ref-chip tier3" title="AdamW: decoupled weight decay variant of Adam; the optimizer for all Screener training stages.">AdamW &mdash; Loshchilov &amp; Hutter (2019)</a>
+        <a href="https://www.sciencedirect.com/science/article/abs/pii/S0734189X8780186X" target="_blank" class="ref-chip tier3" title="CLAHE: contrast-limited adaptive histogram equalization; load-bearing preprocessing step (App. F).">CLAHE &mdash; Pizer et al. (1987)</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="text-align:center; padding: 20px 0 4px; font-size:12px; color: var(--subtle); border-top:1px solid var(--border); margin-top:16px;">
+    Goncharov et&nbsp;al. <em>"Screener: Self-supervised Pathology Segmentation in Medical CT Images"</em> &middot; ICLR 2026 &middot;
+    <a href="https://arxiv.org/abs/2502.08321" target="_blank" style="color: var(--accent-blue); text-decoration:none;">arxiv.org/abs/2502.08321</a>
+    <br><span style="font-size: 11px;">
+      Resources:
+      <a href="https://arxiv.org/abs/2502.08321" target="_blank" style="color: var(--accent-blue); text-decoration:none;">arXiv</a> &middot;
+      <a href="https://github.com/mishgon/screener" target="_blank" style="color: var(--accent-blue); text-decoration:none;">GitHub</a> &middot;
+      <a href="https://openreview.net/forum?id=fNyfV5otuV" target="_blank" style="color: var(--accent-blue); text-decoration:none;">OpenReview</a>
+    </span>
+    <br><span style="font-size: 11px;">Generated 2026-04-29 &middot; v3</span>
+  </div>
+
+</div>
+
+<script>
+  document.getElementById("copy-bib").addEventListener("click", function(e) {
+    var bib = '@inproceedings{goncharov2026screener,\n  title={{Screener: Self-supervised Pathology Segmentation in Medical CT Images}},\n  author={Goncharov, Mikhail and Soboleva, Eugenia and Donskova, Mariia and Ignatyev, Daniil and Belyaev, Mikhail and Oseledets, Ivan and Munkhoeva, Marina and Panov, Maxim},\n  booktitle={International Conference on Learning Representations (ICLR)},\n  year={2026},\n  url={https://openreview.net/forum?id=fNyfV5otuV},\n  eprint={2502.08321},\n  archivePrefix={arXiv},\n  primaryClass={cs.CV}\n}';
+    navigator.clipboard.writeText(bib).then(function() {
+      var btn = e.target;
+      var prev = btn.textContent;
+      btn.textContent = "copied ✓";
+      btn.classList.add("copied");
+      setTimeout(function() { btn.textContent = prev; btn.classList.remove("copied"); }, 1500);
+    });
+  });
+</script>
+</body>
+</html>
