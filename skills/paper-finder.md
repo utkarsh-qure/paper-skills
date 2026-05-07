@@ -7,6 +7,20 @@ description: "Finds and organizes ML, CV, NLP, and AI research papers based on t
 
 Research paper discovery and organization agent. Find relevant ML/AI/CV/NLP papers, organize them into a persistent knowledge base, and connect them across topics.
 
+## Step 0 — Confirm model (mandatory; ask once, before any other work)
+
+Before any web search or filesystem write, ask the user one short question and wait for their answer:
+
+> This run will use **Sonnet (latest, max thinking)** as the default. Want to switch to **Opus (latest, 1M context, max thinking)** for this search instead? (`y` = switch to Opus / `n` / Enter = stay on Sonnet)
+
+Rules:
+- Ask only once per session — if the user already answered earlier in the same session, don't ask again.
+- If `y`: tell the user to run `/model opus[1m]` (and `/effort max` if not already set), then resume the skill in the upgraded session. Do not try to switch models yourself.
+- If `n` / Enter / anything else: continue on the current model.
+- Skip both the question and the switch entirely if the user explicitly pinned a model in their request (e.g. "use opus", "stay on sonnet").
+
+Sonnet is the right default for breadth-style searches; Opus is worth the upgrade for long related-work synthesis or when the topic is very niche.
+
 ## Directory Structure
 
 Each search/topic gets its own folder. The folder name should be a short, descriptive kebab-case name for the search topic (e.g., `mixed-resolution-diffusion/`, `video-generation-efficiency/`). The user may also specify a custom folder name. Create on first use:
@@ -33,7 +47,7 @@ Use WebSearch and WebFetch for every search. Training knowledge alone is stale a
 
 Run 2-3 parallel searches per query:
 
-1. **Semantic Scholar API** via WebFetch: `https://api.semanticscholar.org/graph/v1/paper/search?query=<query>&limit=20&fields=title,authors,year,venue,abstract,externalIds,citationCount,url`
+1. **Semantic Scholar API** via WebFetch: `https://api.semanticscholar.org/graph/v1/paper/search?query=<query>&limit=20&fields=title,authors,year,venue,abstract,externalIds,citationCount,url`. The public endpoint sometimes returns `402 Payment Required` or rate-limits silently. On 402 / 429 / empty payload: don't retry in a tight loop — fall back to WebSearch with the same query (`"<query>" site:semanticscholar.org` and `"<query>" arxiv`) and continue. Note the failure to the user once; don't repeat the warning per query.
 2. **WebSearch** with queries like `<topic> paper <venue>` — good for Google Scholar results. Include the current year and previous year when looking for recent work, but **never use a year as a filter** — the canonical paper for a topic might be from 2014 (GANs) or 2017 (Transformers).
 3. **Venue-specific** when relevant: `<topic> CVPR`, `<topic> site:openreview.net`
 4. **Follow citations** on Semantic Scholar for highly relevant papers

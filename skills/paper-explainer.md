@@ -34,11 +34,27 @@ All files for this paper live in `$PAPERS_DIR/<safe-kebab-title>/`:
 - `summaries/` — per-paper deep dives (on request only)
 - `discussions/` — comparison notes (on request only)
 
-A shared cache lives at `$PAPERS_DIR/.cache/<arxiv-id>/` with subkeys `metadata.xml`, `body.txt`, `references.json`, `readme.md`, `project-page.md`, `<arxiv-id>.pdf`. Use it: before any WebFetch in Step 2, check whether the cache file exists; if so, read it and skip the network call. Cache is append-only — never delete entries.
+A shared cache lives at `$PAPERS_DIR/.cache/<arxiv-id>/` with subkeys `metadata.xml`, `body.txt`, `references.json`, `readme.md`, `project-page.md`, `<arxiv-id>.pdf`. Use it: before any WebFetch in Step 2, check whether the cache file exists; if so, read it and skip the network call. Cache is append-only during a run — never delete entries mid-run. Pruning between runs is safe: `rm -rf $PAPERS_DIR/.cache` only drops fetch caches and never touches paper folders, summaries, or `index.html`. If the user asks to "clear the cache" or notices stale data (e.g. a paper was revised on arXiv), it's safe to remove the single `$PAPERS_DIR/.cache/<arxiv-id>/` subfolder for that paper.
 
 A global index lives at `$PAPERS_DIR/index.html` listing every explained paper; regenerate it after each successful run.
 
 Create the paper's directory and `$PAPERS_DIR/.cache/<arxiv-id>/` before fetching anything.
+
+---
+
+## Step 0 — Confirm model (mandatory; ask once, before any other work)
+
+Before touching the filesystem or the network, ask the user one short question and wait for their answer:
+
+> This run will use **Sonnet (latest, max thinking)** as the default. Want to switch to **Opus (latest, 1M context, max thinking)** for this paper instead? (`y` = switch to Opus / `n` / Enter = stay on Sonnet)
+
+Rules:
+- Ask only once per session — if the user already answered for an earlier paper in the same session, don't ask again.
+- If `y`: tell the user to run `/model opus[1m]` (and `/effort max` if not already set), then resume the skill from Step 1 in the upgraded session. Do not try to switch models yourself.
+- If `n` / Enter / anything else: continue on the current model.
+- Skip both the question and the switch entirely if the user explicitly pinned a model in their request (e.g. "use opus", "stay on sonnet").
+
+This step exists because deep paper reading benefits a lot from the strongest model when the paper is dense or long, but Sonnet is the right default for cost/latency on the average paper.
 
 ---
 
@@ -164,7 +180,15 @@ The script automatically merges short blocks (captions) both above and below the
 
 If either is truncated, re-run with adjusted `--skip-top`, `--y-band <y0> <y1>`, or `--blank-run` (smaller = more granular splits, larger = absorbs internal gaps in multi-panel figures).
 
-If extraction fails entirely, skip the figure section silently — the SVG remains the primary diagram.
+If extraction fails entirely (PDF page renders blank, all blocks rejected, or the saved PNG fails the visual verification on every flag combination you tried), fall back to the **ar5iv HTML** before giving up:
+
+1. WebFetch `https://ar5iv.org/html/<ID>` (already in the cache from Step 2 — re-read `body.txt`'s source if you saved the raw HTML, otherwise refetch).
+2. Find the first `<figure>` whose `<img>` `src` looks like a real figure (not a logo / equation / inline icon). The `src` is usually a relative path under `/html/<ID>/assets/...`.
+3. Resolve it to an absolute URL and download via `curl -sL <url> -o $PAPERS_DIR/<safe-kebab-title>/figure.png`.
+4. Read the saved `figure.png` to visually verify the same way as the pdftotext path.
+5. If ar5iv has no usable figure either, skip the figure section silently — the SVG remains the primary diagram.
+
+Only fall back when the pdftotext path has genuinely failed; don't substitute ar5iv just because the first crop looked imperfect (the script's flags fix that case).
 
 #### Naming
 
@@ -259,7 +283,7 @@ Use CSS custom properties on `:root` so dark mode is a single `prefers-color-sch
   7. Demo links — Colab, HuggingFace Spaces ("Colab demo", "HF demo"). Add when the project page or README links to one.
   8. Checkpoints ("checkpoints" → HuggingFace collection / Drive)
   9. OpenReview, Author's homepage PDF — when arXiv body is paywalled or noticeably different from the conference version
-  10. Reading time pill (e.g. `~22 min read`) with `title` tooltip "Estimated from body word count"
+  10. Reading time pill (e.g. `~22 min read`) with `title` tooltip "Estimated from body word count". Compute as `ceil(body_words / 220)` minutes, where `body_words` is the whitespace-split word count of the paper body (`body.txt` from the cache, post pdftotext/ar5iv, with the references section stripped). 220 wpm is the rough target for technical reading; do not retune per paper.
 - **Copy BibTeX** button — small `<button class="no-print">` that, on click, copies the paper's BibTeX entry to clipboard via `navigator.clipboard.writeText(...)`. Use the **official BibTeX from the project page** if found; otherwise auto-generate `@misc` from the arXiv ID. Avoid escaped Unicode in the JS string — write `é` not `\\\'e`.
 
 **2. TL;DR**
@@ -392,7 +416,7 @@ SVG branch colour guide:
 **9. FOOTER**
 - Citation line, 12px muted (use the official BibTeX from the project page if available; otherwise a self-generated `@misc{<authorYear>, ...}`).
 - One Resources line: `Project page · GitHub · Demo · Video` (only those that exist) as small `#4a7296` links.
-- One generation line: `Generated YYYY-MM-DD · v<N>` only — **do not include absolute paths** (no `/Users/<name>/...`) since the page is portable.
+- One generation line: `Generated YYYY-MM-DD · v<N>` only — **do not include absolute paths** (no `/Users/<name>/...`) since the page is portable. `<N>` is the regen count for *this paper's* HTML: 1 on the first run, increment by 1 every time the user picks "regenerate from scratch" or "update related-work only" in Step 1's skip prompt. Determine the previous value by parsing the existing `<safe-kebab-title>.html` (look for the `Generated …· v` line) before overwriting; if no prior file or value can't be parsed, write `v1`.
 
 ### CSS extras
 
