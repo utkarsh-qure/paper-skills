@@ -120,11 +120,15 @@ Write a single combined `references.bib` file with all papers. Use `@inproceedin
 
 ## Paper Summaries and Comparisons
 
-- **Summaries (long-form HTML 1-pager)**: Invoke the **paper-explainer** skill on the arXiv ID. It generates the full HTML explainer + `scratchpad.md` + folder under `$PAPER_EXPLAINER_OUTPUT_DIR/<paper-slug>/`.
-- **Deep companion artifacts**: For papers worth deeply mastering (a handful — not the full memory bank), invoke the **paper-companion** skill on the slug. It consumes `scratchpad.md` written by the explainer and produces a long-form distill.pub-style companion (700–1200 lines, custom SVGs, lineage continuity). When surfacing papers from this topic, **call out which ones already have companion artifacts** — those are the deeply-internalized core of the topic.
-- **Summaries (short markdown)**: Save a 1-page markdown summary to `summaries/<short-id>.md`. Only when user explicitly asks — don't auto-summarize.
-- **Comparisons**: Read existing summaries first (create if missing via paper-explainer), save discussion to `discussions/<descriptive-name>.md`.
-- **References to known papers**: Search summaries and memory bank first. Only re-read the original paper if the user explicitly asks.
+- **Summaries (long-form HTML 1-pager)**: Invoke the **paper-explainer** skill on the arXiv ID. It generates the full HTML explainer + `scratchpad.md` (+ optionally `code-snapshot.md` if a GitHub repo is found) under `$PAPER_EXPLAINER_OUTPUT_DIR/<paper-slug>/`, and appends related-paper metadata to the **global KB** at `$PAPER_EXPLAINER_OUTPUT_DIR/memory-bank.md` (along with `mind-graph.md` and `references.bib`).
+- **Deep companion artifacts**: For papers worth deeply mastering (a handful — not the full memory bank), invoke the **paper-companion** skill on the slug. It consumes `scratchpad.md` (and `code-snapshot.md` when present) written by the explainer and produces a long-form distill.pub-style companion (700–1200 lines, custom SVGs, lineage continuity). When surfacing papers from this topic, **call out which ones already have companion artifacts** — those are the deeply-internalized core of the topic.
+- **Summaries (short markdown)**: Save a 1-page markdown summary to `summaries/<short-id>.md` inside the topic folder. Only when the user explicitly asks — don't auto-summarize.
+- **Comparisons**: Read existing summaries first (create if missing via paper-explainer), save discussion to `discussions/<descriptive-name>.md` inside the topic folder.
+- **References to known papers**: Search the global `$PAPER_EXPLAINER_OUTPUT_DIR/memory-bank.md` first (cross-paper), then this topic folder's `memory-bank.md` (topic-scoped). Only re-read the original paper if the user explicitly asks.
+
+### Scopes: topic-folder KB vs global KB
+
+Paper-finder writes to the **topic folder** (`<topic-name>/memory-bank.md` etc.) when the user invokes it for a focused literature search. Paper-explainer writes to the **global** `$PAPER_EXPLAINER_OUTPUT_DIR/memory-bank.md` (and friends), accumulating across every paper that ever gets a one-pager. The two scopes coexist — the topic-folder KB is the per-topic working set; the global KB is the union of everything you've ever read.
 
 ## PDF Management
 

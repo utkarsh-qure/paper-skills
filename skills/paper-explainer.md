@@ -24,21 +24,40 @@ PAPERS_DIR="${PAPER_EXPLAINER_OUTPUT_DIR:-$HOME/papers}"
 ```
 and use `$PAPERS_DIR` everywhere below. All file references in this spec assume this resolution.
 
-All files for this paper live in `$PAPERS_DIR/<safe-kebab-title>/`:
+### Per-paper artifacts (live in `$PAPERS_DIR/<safe-kebab-title>/`)
+
 - `one-pager.html` — the visual explainer (one row in the index per folder, badge labelled **one-pager**)
 - `scratchpad.md` — structured deep-read of the paper (metadata, section anchors, named components, loss, equations, benchmarks, ablations, nuances, lede/prereqs material). Every explainer run produces one. This is the **contract** consumed by `paper-companion` to skip re-fetching and re-searching.
+- `code-snapshot.md` — distilled record of the linked GitHub repo (key files with annotated excerpts, code-vs-paper discrepancies, configs). Only present when a repo was found and read. See Step 3 "Read the code" for the format.
 - `figure.png` — extracted teaser/architecture figure from the PDF (when one figure is enough)
 - `figure-1.png` + `figure-2.png` — when two complementary figures are extracted
 - `companion.html` — optional long-form companion artifact (only present if `/paper-companion` was run on this paper)
-- `memory-bank.md` — list of all discovered papers, with the main paper marked `analyzed`
-- `mind-graph.md` — topic-paper connection graph
-- `references.bib` — BibTeX for all papers
-- `summaries/` — per-paper deep dives (on request only)
-- `discussions/` — comparison notes (on request only)
 
-A shared cache lives at `$PAPERS_DIR/.cache/<arxiv-id>/` with subkeys `metadata.xml`, `body.txt`, `references.json`, `readme.md`, `project-page.md`, `<arxiv-id>.pdf`. Use it: before any WebFetch in Step 2, check whether the cache file exists; if so, read it and skip the network call. Cache is append-only during a run — never delete entries mid-run. Pruning between runs is safe: `rm -rf $PAPERS_DIR/.cache` only drops fetch caches and never touches paper folders, summaries, or `index.html`. If the user asks to "clear the cache" or notices stale data (e.g. a paper was revised on arXiv), it's safe to remove the single `$PAPERS_DIR/.cache/<arxiv-id>/` subfolder for that paper.
+### Global artifacts (live at `$PAPERS_DIR/` root)
 
-A global index lives at `$PAPERS_DIR/index.html` listing every explained paper; regenerate it after each successful run.
+- `index.html` — the directory index (regenerate via `scripts/regen_index.py` after each successful run)
+- `memory-bank.md` — single global record of every paper discovered across all explainer runs, deduped by short-id. Append on every run; never per-paper.
+- `mind-graph.md` — single global topic-paper graph, accumulated across runs.
+- `references.bib` — single global BibTeX, deduped by citation key.
+
+(Pre-0.2.x folders may still contain per-paper `memory-bank.md` / `mind-graph.md` / `references.bib` files. Run `uv run python scripts/migrate_kb.py --yes` once to merge them into the global files and remove the per-paper copies. Going forward, every run writes only to the global files.)
+
+### Cache (live at `$PAPERS_DIR/.cache/<arxiv-id>/`)
+
+Persistent cache keys (kept across runs so re-explainers are free of fetches):
+- `metadata.xml` — Atom XML from the arXiv API
+- `body.txt` — single body extraction (HTML fetch → strip tags → text, or `pdftotext -layout`). **Only the source that succeeded is persisted**; if you start with ar5iv and fall back to PDF, the ar5iv body is not cached.
+- `references.json` — Semantic Scholar reference list payload
+- `readme.md` — GitHub README (when a repo was found)
+- `project-page.md` — project page content, markdown-converted (when a project page was located)
+- `github_url.txt`, `project_page_url.txt` — 1-line URL locators
+
+Transient cache items (created mid-run, removed at the end of Step 3 / Step 8):
+- `<arxiv-id>.pdf` — fetched for body or figure extraction; deleted once `body.txt` and `figure.png` are confirmed (Step 8).
+- `source.tar` / `source/` — arxiv LaTeX source bundle (sometimes downloaded to produce a higher-quality figure); deleted once `figure.png` is verified (Step 3, end of figure extraction).
+- `<repo-name>/` — GitHub repo clone (depth=1, LFS skipped); deleted once `code-snapshot.md` is written (Step 3, "Read the code").
+
+`scripts/prune_cache.py` enforces this: any persistent cache that violates the rules (orphans at the root, stale clones, redundant body HTMLs) gets reported in dry-run, removed with `--yes`. Pruning is safe — it never touches paper folders or the global KB.
 
 Create the paper's directory and `$PAPERS_DIR/.cache/<arxiv-id>/` before fetching anything.
 
@@ -79,10 +98,12 @@ For each fetch below, **first check** `$PAPERS_DIR/.cache/<arxiv-id>/<key>` — 
 **Metadata** — cache key `metadata.xml` — `https://export.arxiv.org/api/query?id_list=<ID>`
 Extract: title, authors, published date, abstract, categories.
 
-**Full text** — cache key `body.txt` — try in order until one succeeds:
+**Full text** — cache key `body.txt` (the only body cache key — see below) — try in order until one succeeds:
 1. `https://ar5iv.org/html/<ID>` (follow redirects to ar5iv.labs.arxiv.org)
 2. `https://arxiv.org/html/<ID>` (modern HTML rendering)
 3. PDF download via `curl -sL https://arxiv.org/pdf/<ID> -o $PAPERS_DIR/.cache/<ID>/<ID>.pdf` then `pdftotext -layout` (or PyMuPDF)
+
+**Persist exactly one body extraction.** Whichever source succeeds, strip-tags / pdftotext into plain text and write to `body.txt`. **Do not** also persist raw HTML fetches under separate names like `body.html`, `abs.html`, `ar5iv.html` — they're discarded once `body.txt` is on disk. (`prune_cache.py` will remove any such stragglers it finds from older runs.) The PDF, if downloaded, lives at `<arxiv-id>.pdf` temporarily and gets removed in Step 8 once `body.txt` and `figure.png` are confirmed.
 
 Keep the body text with section headings preserved (so section pointers like "§3.2" are recoverable).
 
@@ -109,16 +130,72 @@ Walk through the full body. Keep a scratchpad with **section anchors** as you go
 - **Ablations** — these almost always reveal what the authors found surprising; note which components contribute which gain
 - **Limitations / Discussion / Appendix** — record any acknowledged failure mode, hyperparameter sensitivity, or finding the abstract glossed over
 
-### Read the code (if available)
+### Read the code (if available) — clone, snapshot, delete
 
-If a GitHub repo is found:
-1. Fetch the README (`/main/README.md` then `/master/README.md`)
-2. List the repo tree and identify the actual model + loss + training files (not just the README)
-3. Read the **loss function** and the **forward pass** of the main model — these reveal the real algorithm
-4. Read the default config — note the actual hyperparameters used (often differ from paper claims)
-5. If anything in the code contradicts or refines the paper, note it as a nuance for Step 5
+If a GitHub repo is found, the workflow is **clone → write `code-snapshot.md` → delete the clone**. The snapshot is the canonical persisted record of what the code revealed; the clone is transient.
 
-Don't dump the full repo into context. Pick the 3-5 files that matter.
+1. **Clone shallowly, no LFS.** The README has already been cached as `readme.md` in Step 2; for the rest, clone the repo into the cache:
+
+   ```bash
+   GIT_LFS_SKIP_SMUDGE=1 git clone --depth=1 --no-tags --single-branch \
+     <repo-url> $PAPERS_DIR/.cache/<arxiv-id>/<repo-name>/
+   ```
+
+   `GIT_LFS_SKIP_SMUDGE=1` keeps LFS payloads (checkpoints, demo videos, dataset samples) from being pulled — they're almost never relevant for code-reading. `--depth=1 --no-tags --single-branch` minimizes git history. Large repos thus stay under ~10 MB during the brief window the clone exists.
+
+2. **List the repo tree** (`find`, `ls -R`, or `git ls-files`) and identify the actual model + loss + training files (not just the README).
+
+3. **Read 3–5 files that matter** — typically the loss function, the forward pass of the main model, the default config, and (optionally) the training loop or data loader. Don't dump the full repo into context.
+
+4. **Write `$PAPERS_DIR/<safe-kebab-title>/code-snapshot.md`** with this structure:
+
+   ```markdown
+   # Code reading: <owner>/<repo>
+
+   ## Repo metadata
+   - **GitHub**: https://github.com/<owner>/<repo>
+   - **Default branch**: <branch> · commit <sha7>
+   - **Cloned**: YYYY-MM-DD
+   - **License**: <e.g., MIT>
+   - **Original on-disk size**: <e.g., 308 KB> (clone deleted after snapshot)
+
+   ## Repo tree (abbreviated; non-code dirs collapsed)
+   ```
+   <repo-name>/
+   ├── ...
+   ```
+
+   ## Key files
+
+   ### `<path/to/loss.py>` — Loss function (§X.Y in the paper)
+   *Why it matters: ...*
+   ```python
+   # 20–60 line salient excerpt
+   ```
+   *Code-vs-paper notes (if any): ...*
+
+   ### `<path/to/model.py>` — Forward pass
+   ...
+
+   ### `<configs/foo.yaml>` — Default hyperparameters
+   ```yaml
+   # full file if small (<80 lines), otherwise the relevant block
+   ```
+
+   ## Discrepancies surfaced
+   - (e.g., paper says lr=5e-4 but config has 1e-4)
+
+   ## Findings that don't fit the scratchpad
+   - (subtle implementation details worth knowing)
+   ```
+
+   Target snapshot size: 150–400 lines. If you need more, the snapshot has gone overboard — re-clone for deeper exploration later.
+
+5. **Delete the clone** with `rm -rf $PAPERS_DIR/.cache/<arxiv-id>/<repo-name>/` once `code-snapshot.md` is written.
+
+6. **Feed findings back into the scratchpad** — code-vs-paper discrepancies become nuances; the actual loss form goes into `Loss function (verbatim)`; the paper's notation (now confirmed against code) goes into `Named components & terminology`.
+
+If no GitHub repo is found for this paper, skip the entire step. `code-snapshot.md` is not written.
 
 ### Read the project page (if available)
 
@@ -198,6 +275,16 @@ Only fall back when the pdftotext path has genuinely failed; don't substitute ar
 
 - Single figure: save as `figure.png` in the paper folder
 - Two figures: save as `figure-1.png` and `figure-2.png` (and update the HTML's "FROM THE PAPER" section to render both, each with its own type label)
+
+#### Clean up the arxiv source bundle (if it was downloaded)
+
+If `source.tar` and/or extracted `source/` exist under `$PAPERS_DIR/.cache/<arxiv-id>/` (some agents pull the arxiv e-print bundle for higher-quality figure crops), remove both once `figure.png` is verified:
+
+```bash
+rm -rf $PAPERS_DIR/.cache/<arxiv-id>/source.tar $PAPERS_DIR/.cache/<arxiv-id>/source
+```
+
+The figure is already on disk; the source bundle has no further use. `prune_cache.py` would remove them anyway, but it's cheaper to clean up in-line.
 
 ### Persist deep-read state — write `scratchpad.md`
 
@@ -509,27 +596,37 @@ No dark-mode override — the distill.pub palette is light-only by design, match
 
 ---
 
-## Step 6 — Write knowledge base files
+## Step 6 — Append to the global knowledge base
 
-In `$PAPERS_DIR/<safe-kebab-title>/`:
+All KB writes go to the **root** of `$PAPERS_DIR/`, not the per-paper folder. One global file per type, accumulated across every explainer run.
 
-**`memory-bank.md`** — write the paper itself as the first entry (`status: analyzed`), then all related papers (cited + discovered) using the paper-finder format:
+**`$PAPERS_DIR/memory-bank.md`** — single global record of every paper discovered across all explainer runs. Read the existing file (if any), parse out the `### [short-id] Title` blocks, then for each paper produced by this run:
+- If the short-id already exists → update only fields that improved (citation count went up, status moved `discovered` → `analyzed`, etc.); leave the rest alone.
+- If new → append a new block.
+
+Block format:
 ```
 ### [short-id] Title
 - **Authors**: ...
 - **Venue**: ..., Year
 - **URL**: https://arxiv.org/abs/<id>
 - **Citations**: N
-- **Status**: discovered
+- **Status**: discovered | analyzed
 - **Topics**: topic1, topic2
 - **Tier**: 1 | 2 | 3
+- **Discovered via**: <slug-of-paper-being-explained>  ← append to existing list if already present
 - **Abstract**: 1-2 sentence summary
-- **Notes**: relevance to this paper
+- **Notes**: relevance / brief commentary
+---
 ```
 
-**`mind-graph.md`** — identify 3-6 key topics from the paper. For each topic, list the most relevant papers from the papers list with one-line notes. Use the paper-finder mind-graph format.
+The current paper being explained becomes a `### [short-id] Title` block with `Status: analyzed`. The `Discovered via` field lets you grep `^- \*\*Discovered via\*\*:.*<slug>` to recover the per-paper related-work neighborhood without a separate file.
 
-**`references.bib`** — BibTeX for all papers with arXiv IDs. `@misc` for arXiv preprints, `@inproceedings` for confirmed conference papers. Citation key = short-id. This is the canonical PDF source — `paper-finder` reads from here for downloads.
+**`$PAPERS_DIR/mind-graph.md`** — single global topic-paper graph. Identify 3-6 key topics from this paper; for each topic, either merge into an existing `### Topic` section (append unique papers) or create a new section. Use the paper-finder mind-graph format.
+
+**`$PAPERS_DIR/references.bib`** — single global BibTeX. Read the existing file, parse `@<type>{<key>, ...}` entries, dedupe by citation key. For new entries: `@misc` for arXiv preprints, `@inproceedings` for confirmed conference papers. Citation key = short-id.
+
+(Pre-0.2.x folders may still hold per-paper KB files. Run `uv run python scripts/migrate_kb.py --yes` once to merge them into the global files; from then on, every explainer run writes only to the root-level files.)
 
 ---
 
@@ -552,9 +649,20 @@ Both `paper-explainer` and `paper-companion` call this script at the end of thei
 
 ---
 
-## Step 8 — Save and open
+## Step 8 — Save, clean up cache, and open
 
-1. Save HTML to `$PAPERS_DIR/<safe-kebab-title>/one-pager.html` using the Write tool. (`scratchpad.md` was already written in Step 3.)
-2. Run `open "$PAPERS_DIR/<safe-kebab-title>/one-pager.html"` via Bash (macOS) or `xdg-open` (Linux)
-3. Tell the user: output path, paper title, total related papers (cited + discovered, with tier counts), the knowledge base location, and one specific nuance you found that was not in the abstract
-4. Offer: "Want me to dive deeper on any related paper, generate a summary in `summaries/`, compare specific papers, or **build a deep companion artifact** with `/paper-companion <slug>`?"
+1. Save HTML to `$PAPERS_DIR/<safe-kebab-title>/one-pager.html` using the Write tool. (`scratchpad.md` was already written in Step 3; `code-snapshot.md` was written in Step 3's "Read the code" sub-step if a repo was found.)
+
+2. **Clean up the transient cache items now that durable artifacts exist on disk.** Run:
+   ```bash
+   # Remove the downloaded PDF — body.txt and figure.png are the artifacts we keep
+   rm -f $PAPERS_DIR/.cache/<arxiv-id>/<arxiv-id>.pdf
+   # (source.tar / source/ and the repo clone were already removed in Step 3)
+   ```
+   Only delete the PDF if `body.txt` and `figure.png` both exist on disk; otherwise keep it for a potential figure-re-extraction.
+
+3. Run `open "$PAPERS_DIR/<safe-kebab-title>/one-pager.html"` via Bash (macOS) or `xdg-open` (Linux).
+
+4. Tell the user: output path, paper title, total related papers (cited + discovered, with tier counts), the global KB location, and one specific nuance you found that was not in the abstract.
+
+5. Offer: "Want me to dive deeper on any related paper, generate a summary, compare specific papers, or **build a deep companion artifact** with `/paper-companion <slug>`?"

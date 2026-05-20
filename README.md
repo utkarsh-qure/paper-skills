@@ -6,15 +6,16 @@
 
 | Stage | Skill | Volume | Output |
 |---|---|---|---|
-| **Discover** | [`paper-finder`](skills/paper-finder.md) | hundreds | topic `memory-bank.md`, `mind-graph.md`, `references.bib` |
-| **Orient** | [`paper-explainer`](skills/paper-explainer.md) | dozens | `one-pager.html` + structured `scratchpad.md` + KB updates |
-| **Master** | [`paper-companion`](skills/paper-companion.md) | a handful | long-form `companion.html` (700–1200 lines) consuming the scratchpad |
+| **Discover** | [`paper-finder`](skills/paper-finder.md) | hundreds | topic-folder `memory-bank.md` / `mind-graph.md` / `references.bib` (and feeds the global KB) |
+| **Orient** | [`paper-explainer`](skills/paper-explainer.md) | dozens | `one-pager.html` + `scratchpad.md` + `code-snapshot.md` (if a repo is found) + global-KB updates |
+| **Master** | [`paper-companion`](skills/paper-companion.md) | a handful | long-form `companion.html` (700–1200 lines) consuming the scratchpad + code snapshot |
 
 You install the skills once for your agent (Claude Code, Cursor, Aider, Cline, Codex CLI, …) and from then on you can drop an arXiv link into any chat and get back:
 
 - a single-file HTML one-pager with a custom SVG architecture diagram, key equations + verbatim paper quotes, embedded paper figures, attributed metric cards, "what most summaries miss" nuances, and a tiered chip cloud of related work,
-- a durable `scratchpad.md` — the contract between explainer and companion — so the deep companion run is free of duplicated fetching,
-- a persistent knowledge base (`memory-bank.md`, `mind-graph.md`, `references.bib`) that grows as you read more papers in the same area,
+- a durable `scratchpad.md` — the structured contract between explainer and companion — so the deep companion run is free of duplicated fetching,
+- a `code-snapshot.md` (when a GitHub repo is found) — the distilled record of the linked code: key files with annotated excerpts, code-vs-paper discrepancies, configs. The clone itself is deleted after the snapshot is written; the snapshot is canonical.
+- a persistent **global** knowledge base at the `$PAPER_EXPLAINER_OUTPUT_DIR/` root (`memory-bank.md`, `mind-graph.md`, `references.bib`) that grows as you read more papers — one canonical KB, not per-paper duplicates,
 - on demand, a distill.pub-style companion artifact with hand-coded SVGs, interactive widgets, lineage continuity (recap cards + prev/next nav across a paper series), and self-check questions.
 
 The agent does the deep reading — body, code, project page, related work — and is told (via the spec) to *complement*, not duplicate, the paper's own visuals. The companion run after an explainer **reads only from disk** — no re-fetch, no re-search.
@@ -32,26 +33,28 @@ paper-skills/
 ├── README.md                      ← you are here
 ├── pyproject.toml                 ← uv-managed Python project (Pillow + PyMuPDF)
 ├── skills/
-│   ├── paper-finder.md            ← discover: multi-angle paper discovery + KB
-│   ├── paper-explainer.md         ← orient: arXiv URL → 1-pager HTML + scratchpad
+│   ├── paper-finder.md            ← discover: multi-angle paper discovery + topic KB
+│   ├── paper-explainer.md         ← orient: arXiv URL → one-pager + scratchpad + code-snapshot
 │   └── paper-companion.md         ← master: scratchpad → long-form distill.pub companion
 ├── scripts/
 │   ├── extract_figure.py          ← cross-platform figure+caption crop from PDF
 │   ├── validate_svg.py            ← SVG text-overflow validator
-│   └── regen_index.py             ← regenerates the global index with depth badges
+│   ├── regen_index.py             ← regenerates the global index with depth badges
+│   ├── prune_cache.py             ← removes stale clones, source bundles, redundant fetches
+│   └── migrate_kb.py              ← one-shot: consolidate per-paper KB → global KB (0.1.x → 0.2.x)
 ├── install/
 │   ├── claude-code.md             ← detailed setup for Claude Code (slash commands)
 │   └── other-agents.md            ← generic setup for any other agent
 └── examples/
     └── screener-pathology-segmentation/
-        ├── one-pager.html                         ← orient: the visual explainer
-        ├── companion.html                        ← master: the deep companion
-        ├── scratchpad.md                         ← contract between explainer and companion
-        ├── figure.png
-        ├── memory-bank.md
-        ├── mind-graph.md
-        └── references.bib
+        ├── one-pager.html         ← orient: the visual explainer
+        ├── companion.html         ← master: the deep companion
+        ├── scratchpad.md          ← structured contract between explainer and companion
+        └── figure.png             ← (code-snapshot.md would also live here when a repo is read;
+                                       absent for Screener because no clone was made in this run)
 ```
+
+The **global** KB (`memory-bank.md`, `mind-graph.md`, `references.bib`) and `index.html` live one level up at `$PAPER_EXPLAINER_OUTPUT_DIR/` — not inside the per-paper folder.
 
 ---
 
@@ -105,7 +108,7 @@ Plus **dark mode** and **print stylesheet**.
 5. **Multi-angle paper discovery** — direct-topic + cross-domain-synonym + venue-aware + mechanism-level searches, dedupe against the cited list, tier each paper.
 6. **HTML generation** — render all sections per the spec, with KaTeX math, distill.pub design tokens (Crimson Pro + Karla + JetBrains Mono; ink/accent/teal/purple palette shared with `paper-companion`), tiered chips with hover tooltips, copy-BibTeX button.
 7. **SVG validation** — `scripts/validate_svg.py` parses every inline SVG and verifies every `<text>` element fits inside its parent `<rect>` (predicted width = `chars × font_size × 0.55`, with 8 px margin). Re-roll any overflow.
-8. **Knowledge base + index** — write `memory-bank.md` / `mind-graph.md` / `references.bib`, regenerate `$PAPER_EXPLAINER_OUTPUT_DIR/index.html` via `scripts/regen_index.py`, open the page.
+8. **Knowledge base + index + cleanup** — append paper metadata to the **global** `$PAPER_EXPLAINER_OUTPUT_DIR/{memory-bank,mind-graph,references.bib}` (deduped by short-id / topic / citation key); regenerate `$PAPER_EXPLAINER_OUTPUT_DIR/index.html` via `scripts/regen_index.py`; delete the cached PDF, source bundle (if any), and repo clone (after `code-snapshot.md` is written); open the page.
 
 ### `paper-companion` — consume the scratchpad (master)
 
@@ -122,19 +125,23 @@ When invoked with `/paper-companion <slug>` (or arXiv ID/URL), the companion rea
 
 ```bash
 /paper-finder Find papers on self-supervised pathology segmentation in CT
-# → memory-bank.md / mind-graph.md / references.bib in the topic folder
+# → topic-folder memory-bank.md / mind-graph.md / references.bib
+#   (also feeds the global KB at $PAPERS_DIR/)
 
-/paper-explainer https://arxiv.org/abs/2502.08321
-# → ~/papers/screener-pathology-segmentation/
-#     ├── one-pager.html                         (the visual explainer)
-#     ├── scratchpad.md                          (structured deep-read)
-#     ├── figure.png
-#     ├── memory-bank.md / mind-graph.md / references.bib
+/paper-explainer https://arxiv.org/abs/2301.08243
+# → ~/papers/i-jepa/
+#     ├── one-pager.html         (the visual explainer, distill.pub theme)
+#     ├── scratchpad.md          (structured deep-read; 9-section contract)
+#     ├── code-snapshot.md       (annotated key files from the linked GitHub repo;
+#     │                           clone was deleted after the snapshot)
+#     └── figure.png
+# Plus ~/papers/memory-bank.md, mind-graph.md, references.bib appended to.
 # Plus ~/papers/index.html regenerated with a `one-pager` badge.
+# Cache reduced: PDF + repo clone + source bundle all gone.
 
-/paper-companion screener-pathology-segmentation
-# Reads scratchpad.md, no WebFetch / WebSearch / arxiv.org curl.
-# → ~/papers/screener-pathology-segmentation/companion.html
+/paper-companion i-jepa
+# Reads scratchpad.md + code-snapshot.md; no WebFetch / WebSearch / arxiv.org curl.
+# → ~/papers/i-jepa/companion.html
 # Index regenerates with an additional `deep companion` badge.
 ```
 
@@ -180,7 +187,7 @@ See [`install/other-agents.md`](install/other-agents.md). The generic recipe:
 1. Install dependencies: `uv sync`.
 2. Set the env var: `export PAPER_EXPLAINER_OUTPUT_DIR="$HOME/papers"`.
 3. Provide all three markdown specs (`paper-finder.md`, `paper-explainer.md`, `paper-companion.md`) as system prompts / project rules / skills, depending on what your agent supports. The YAML frontmatter is optional for non-Cursor agents.
-4. Make sure the agent can run `uv run python scripts/extract_figure.py`, `scripts/validate_svg.py`, and `scripts/regen_index.py` via shell.
+4. Make sure the agent can run `uv run python scripts/extract_figure.py`, `scripts/validate_svg.py`, `scripts/regen_index.py`, `scripts/prune_cache.py`, and `scripts/migrate_kb.py` via shell.
 
 ---
 
@@ -210,6 +217,22 @@ uv run python scripts/regen_index.py                # uses $PAPER_EXPLAINER_OUTP
 uv run python scripts/regen_index.py ~/papers       # explicit root
 ```
 
+`scripts/prune_cache.py` — audits and trims `$PAPER_EXPLAINER_OUTPUT_DIR/.cache/`. Removes (with `--yes`; dry-run otherwise): orphan files at the cache root, redundant body-fetch fallbacks (`body.html`, `abs.html`, `ar5iv.html`, …) once `body.txt` exists, repo clones once `code-snapshot.md` exists, source bundles once `figure.png` exists, and cached PDFs once both `body.txt` and `figure.png` exist. Safe by default — never touches paper folders or the global KB.
+
+```bash
+uv run python scripts/prune_cache.py                  # dry-run on $PAPER_EXPLAINER_OUTPUT_DIR
+uv run python scripts/prune_cache.py --yes            # actually delete
+uv run python scripts/prune_cache.py --older-than 30  # also evict cache subdirs untouched for >30 days
+```
+
+`scripts/migrate_kb.py` — one-shot migration from the 0.1.x per-paper KB layout to the 0.2.x global KB. Walks `<slug>/memory-bank.md`, `<slug>/mind-graph.md`, `<slug>/references.bib`, dedupes (by short-id / topic name / citation key), writes the merged result to `$PAPER_EXPLAINER_OUTPUT_DIR/{memory-bank,mind-graph,references.bib}`, and either backs up the per-paper files to `$PAPER_EXPLAINER_OUTPUT_DIR/.legacy-kb/<slug>/` or deletes them with `--purge`.
+
+```bash
+uv run python scripts/migrate_kb.py                # dry-run
+uv run python scripts/migrate_kb.py --yes          # migrate; back up per-paper files
+uv run python scripts/migrate_kb.py --yes --purge  # migrate; delete per-paper files
+```
+
 ---
 
 ## Output directory
@@ -218,20 +241,24 @@ All pipeline output lands in `$PAPER_EXPLAINER_OUTPUT_DIR` (defaults to `~/paper
 
 ```
 $PAPER_EXPLAINER_OUTPUT_DIR/
-├── index.html                                  ← global index with depth badges (one-pager / deep companion)
-├── .cache/<arxiv-id>/                          ← cached metadata / body / refs / pdf
+├── index.html                                  ← global index with depth badges
+├── memory-bank.md                              ← global KB: every paper discovered across all runs
+├── mind-graph.md                               ← global topic-paper graph
+├── references.bib                              ← global BibTeX
+├── .cache/<arxiv-id>/                          ← lean cache: metadata, body.txt, references.json,
+│                                                  readme.md, project-page.md, *_url.txt
 ├── .lineages/<lineage-slug>.json               ← lineage manifest (paper list + ordering)
 └── <paper-slug>/
-    ├── one-pager.html                          ← one-pager (paper-explainer)
+    ├── one-pager.html                          ← orient (paper-explainer)
     ├── scratchpad.md                           ← structured deep-read (paper-explainer)
+    ├── code-snapshot.md                        ← annotated code findings (when a GitHub repo exists)
     ├── companion.html                          ← long-form companion (paper-companion, optional)
-    ├── figure.png   (or figure-1.png + figure-2.png)
-    ├── memory-bank.md
-    ├── mind-graph.md
-    └── references.bib
+    └── figure.png   (or figure-1.png + figure-2.png)
 ```
 
-Re-running `paper-explainer` on the same paper will hit the cache, skip every WebFetch, and prompt before overwriting. Running `paper-companion` after `paper-explainer` reads only from `scratchpad.md` — no re-fetch, no re-search.
+Re-running `paper-explainer` on the same paper will hit the cache, skip every WebFetch, and prompt before overwriting. Running `paper-companion` after `paper-explainer` reads only from `scratchpad.md` (and `code-snapshot.md` if present) — no re-fetch, no re-search.
+
+After every successful run, the cache trims itself: the cached PDF is removed once `body.txt` + `figure.png` are confirmed; the GitHub repo clone is removed once `code-snapshot.md` is written; the arxiv source bundle is removed once `figure.png` is extracted. The cache stays bounded to the durable artifacts.
 
 ---
 

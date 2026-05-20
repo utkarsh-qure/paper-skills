@@ -49,11 +49,12 @@ Claude will:
 
 1. Resolve the arXiv ID to `2502.08321`.
 2. Check `$PAPER_EXPLAINER_OUTPUT_DIR/screener-pathology-segmentation/one-pager.html` — if present, ask whether to regenerate.
-3. Otherwise: fetch metadata, body, references, GitHub repo, project page (all in parallel; cached after first run).
-4. Read the paper carefully (Method / Experiments / Ablations / Limitations / Appendix), source code, and the project page.
-5. Run `scripts/extract_figure.py` from this repo on the downloaded PDF.
-6. Write the **scratchpad.md** (structured deep-read; the contract consumed by `paper-companion`).
-7. Generate the HTML, validate the SVG, write the knowledge base, regenerate the global index via `scripts/regen_index.py`, and `open` the page.
+3. Otherwise: fetch metadata, body, references, GitHub repo URL, project page (all in parallel; cached after first run).
+4. Read the paper carefully (Method / Experiments / Ablations / Limitations / Appendix), the project page, and (if a repo exists) `git clone` the repo into the cache with LFS skipped and `--depth=1`.
+5. Read 3–5 key files from the clone (loss, forward pass, config) and write **`code-snapshot.md`**; then `rm -rf` the clone.
+6. Run `scripts/extract_figure.py` from this repo on the downloaded PDF.
+7. Write the **`scratchpad.md`** (structured deep-read; the contract consumed by `paper-companion`).
+8. Generate the HTML, validate the SVG, append paper metadata to the **global** KB at `$PAPER_EXPLAINER_OUTPUT_DIR/{memory-bank,mind-graph,references.bib}`, regenerate the global index via `scripts/regen_index.py`, delete the cached PDF + source bundle, and `open` the page.
 
 You can also pass:
 
