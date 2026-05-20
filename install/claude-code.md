@@ -20,12 +20,13 @@ export PAPER_EXPLAINER_OUTPUT_DIR="$HOME/papers"       # change to whatever you 
 
 ## Wire up the skills
 
-Symlink the two skill files into Claude's commands directory:
+Symlink the three skill files into Claude's commands directory:
 
 ```bash
 mkdir -p ~/.claude/commands
-ln -sf "$(pwd)/skills/paper-explainer.md" ~/.claude/commands/paper-explainer.md
 ln -sf "$(pwd)/skills/paper-finder.md"    ~/.claude/commands/paper-finder.md
+ln -sf "$(pwd)/skills/paper-explainer.md" ~/.claude/commands/paper-explainer.md
+ln -sf "$(pwd)/skills/paper-companion.md" ~/.claude/commands/paper-companion.md
 ```
 
 Verify:
@@ -34,7 +35,7 @@ Verify:
 ls -la ~/.claude/commands/paper-*.md
 ```
 
-You should see two symlinks pointing into `…/paper-skills/skills/`.
+You should see three symlinks pointing into `…/paper-skills/skills/`.
 
 ## Usage
 
@@ -51,7 +52,8 @@ Claude will:
 3. Otherwise: fetch metadata, body, references, GitHub repo, project page (all in parallel; cached after first run).
 4. Read the paper carefully (Method / Experiments / Ablations / Limitations / Appendix), source code, and the project page.
 5. Run `scripts/extract_figure.py` from this repo on the downloaded PDF.
-6. Generate the HTML, validate the SVG, write the knowledge base, append to the global index, and `open` the page.
+6. Write the **scratchpad.md** (structured deep-read; the contract consumed by `paper-companion`).
+7. Generate the HTML, validate the SVG, write the knowledge base, regenerate the global index via `scripts/regen_index.py`, and `open` the page.
 
 You can also pass:
 
@@ -67,6 +69,18 @@ For multi-paper discovery (without the full HTML), use the partner skill:
 ```
 
 This builds up `memory-bank.md` / `mind-graph.md` / `references.bib` in a topic folder you can keep growing over time.
+
+## Deep mastery: companion artifacts
+
+Once a paper has been oriented via the explainer, build a long-form distill.pub-style companion (700–1200 lines, custom SVGs, KaTeX, callouts, self-check, lineage continuity):
+
+```
+/paper-companion screener-pathology-segmentation
+```
+
+You can also pass an arXiv ID/URL — companion will resolve to the slug. The companion **reads from `scratchpad.md`** and skips all web-fetching, so re-running the explainer + companion on the same paper is cheap. If no explainer has been run yet for the target paper, companion prompts you to run `/paper-explainer <arxiv-id>` first (or pass `--force` to extract from scratch — without writing `scratchpad.md` or updating the knowledge base).
+
+The pipeline is **discover (finder) → orient (explainer) → master (companion)**. Most papers stop at the explainer; reach for companion only on the handful worth deeply mastering.
 
 ## Tips
 

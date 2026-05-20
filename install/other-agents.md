@@ -24,9 +24,10 @@ Add `export PAPER_EXPLAINER_OUTPUT_DIR=…` to your shell rc so it persists.
 Cursor reads skills from `~/.cursor/skills/<skill-name>/SKILL.md`. The YAML frontmatter at the top of each skill is what Cursor uses for auto-discovery.
 
 ```bash
-mkdir -p ~/.cursor/skills/paper-explainer ~/.cursor/skills/paper-finder
-ln -sf "$(pwd)/skills/paper-explainer.md" ~/.cursor/skills/paper-explainer/SKILL.md
+mkdir -p ~/.cursor/skills/paper-finder ~/.cursor/skills/paper-explainer ~/.cursor/skills/paper-companion
 ln -sf "$(pwd)/skills/paper-finder.md"    ~/.cursor/skills/paper-finder/SKILL.md
+ln -sf "$(pwd)/skills/paper-explainer.md" ~/.cursor/skills/paper-explainer/SKILL.md
+ln -sf "$(pwd)/skills/paper-companion.md" ~/.cursor/skills/paper-companion/SKILL.md
 ```
 
 Verify:
@@ -35,7 +36,7 @@ Verify:
 ls -la ~/.cursor/skills/paper-*/SKILL.md
 ```
 
-Restart Cursor. In any chat, paste an arXiv URL with a phrase like "explain this paper" — Cursor should auto-suggest the `paper-explainer` skill from the YAML frontmatter description.
+Restart Cursor. In any chat, paste an arXiv URL with a phrase like "explain this paper" — Cursor should auto-suggest the `paper-explainer` skill from the YAML frontmatter description. Say "build me a companion for X" or "I want to deeply understand Y" and Cursor will pick `paper-companion` (which then reads the scratchpad written by the explainer).
 
 ---
 
@@ -45,9 +46,9 @@ If your agent doesn't have a skills system, just provide the skill markdown as a
 
 ### 1. Provide the spec to the agent
 
-Pick whichever your agent supports:
+Pick whichever your agent supports. Provide *all three* skills (`paper-finder.md`, `paper-explainer.md`, `paper-companion.md`) so the discover → orient → master pipeline is intact:
 
-- **System prompt**: paste the full content of `skills/paper-explainer.md` (drop the YAML frontmatter — it's only meaningful to Cursor).
+- **System prompt**: paste the full content of each skill (drop the YAML frontmatter — it's only meaningful to Cursor).
 - **Project rule / convention file**: e.g. `.aider.conf.yml`'s `read:` field, Cline's `.clinerules/`, Continue's `~/.continue/config.json` `systemMessage`, Codex CLI's `~/.codex/instructions.md`. Same rule: paste the markdown body.
 - **Manual paste**: if all else fails, paste the spec into your first message of the chat ("Use the following skill to handle paper requests …") followed by the arXiv URL. Less convenient but it works.
 
@@ -76,21 +77,29 @@ In any chat:
 
 > Use the paper-explainer skill on https://arxiv.org/abs/2502.08321
 
-The agent should follow the spec end-to-end and produce a folder under `$PAPER_EXPLAINER_OUTPUT_DIR/`.
+The agent should follow the spec end-to-end and produce a folder under `$PAPER_EXPLAINER_OUTPUT_DIR/` containing the one-pager HTML, `scratchpad.md`, and KB files.
+
+Then, when you want a deep companion artifact for the same paper:
+
+> Use the paper-companion skill on screener-pathology-segmentation
+
+The companion reads `scratchpad.md` written by the explainer and skips all web-fetching.
 
 ---
 
 ## Per-agent notes
 
-**Aider** — The skill spec is large (≈ 1k lines). Use `--read skills/paper-explainer.md` so it's a project file the agent can refer to without burning a system-prompt slot. Ask Aider to "follow the instructions in `skills/paper-explainer.md`" when you want to use it.
+All three skill specs (`paper-finder.md`, `paper-explainer.md`, `paper-companion.md`) follow the same install pattern. Pick one, then repeat for the others.
 
-**Cline / Continue** — Both have a "rules" / "system message" concept. Paste the spec there. Cline's `.clinerules/paper-explainer.md` works. Continue uses `~/.continue/config.json` → `systemMessage`.
+**Aider** — The skill spec is large (each ≈ 0.5–1k lines). Use `--read skills/paper-explainer.md skills/paper-companion.md skills/paper-finder.md` so they're project files the agent can refer to without burning a system-prompt slot. Ask Aider to "follow the instructions in `skills/<skill-name>.md`" when you want to use one.
 
-**Codex CLI** — Drop the spec into `~/.codex/instructions.md` (or invoke via inline `@skills/paper-explainer.md`).
+**Cline / Continue** — Both have a "rules" / "system message" concept. Paste each spec there. Cline's `.clinerules/paper-explainer.md` (and `paper-companion.md`, `paper-finder.md`) work. Continue uses `~/.continue/config.json` → `systemMessage`.
 
-**Goose** — Use a recipe (`~/.config/goose/recipes/paper-explainer.yaml`) that loads the spec as instructions.
+**Codex CLI** — Drop the specs into `~/.codex/instructions.md` (or invoke via inline `@skills/paper-companion.md`).
 
-**Anything else** — As long as the agent can (a) follow a markdown spec and (b) run shell commands, it works. The spec doesn't depend on any agent-specific tool — only generic operations like "fetch a URL", "write a file", "run a shell command".
+**Goose** — Use a recipe per skill (`~/.config/goose/recipes/paper-explainer.yaml` etc.) that loads the spec as instructions.
+
+**Anything else** — As long as the agent can (a) follow a markdown spec and (b) run shell commands, it works. The specs don't depend on any agent-specific tool — only generic operations like "fetch a URL", "write a file", "run a shell command".
 
 ---
 

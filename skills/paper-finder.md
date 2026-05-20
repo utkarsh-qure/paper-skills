@@ -120,7 +120,8 @@ Write a single combined `references.bib` file with all papers. Use `@inproceedin
 
 ## Paper Summaries and Comparisons
 
-- **Summaries (long-form HTML 1-pager)**: Invoke the **paper-explainer** skill on the arXiv ID. It generates the full HTML explainer + folder under `$PAPER_EXPLAINER_OUTPUT_DIR/<paper-slug>/`.
+- **Summaries (long-form HTML 1-pager)**: Invoke the **paper-explainer** skill on the arXiv ID. It generates the full HTML explainer + `scratchpad.md` + folder under `$PAPER_EXPLAINER_OUTPUT_DIR/<paper-slug>/`.
+- **Deep companion artifacts**: For papers worth deeply mastering (a handful — not the full memory bank), invoke the **paper-companion** skill on the slug. It consumes `scratchpad.md` written by the explainer and produces a long-form distill.pub-style companion (700–1200 lines, custom SVGs, lineage continuity). When surfacing papers from this topic, **call out which ones already have companion artifacts** — those are the deeply-internalized core of the topic.
 - **Summaries (short markdown)**: Save a 1-page markdown summary to `summaries/<short-id>.md`. Only when user explicitly asks — don't auto-summarize.
 - **Comparisons**: Read existing summaries first (create if missing via paper-explainer), save discussion to `discussions/<descriptive-name>.md`.
 - **References to known papers**: Search summaries and memory bank first. Only re-read the original paper if the user explicitly asks.

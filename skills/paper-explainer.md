@@ -26,8 +26,10 @@ and use `$PAPERS_DIR` everywhere below. All file references in this spec assume 
 
 All files for this paper live in `$PAPERS_DIR/<safe-kebab-title>/`:
 - `<safe-kebab-title>.html` — the visual explainer
+- `scratchpad.md` — structured deep-read of the paper (metadata, section anchors, named components, loss, equations, benchmarks, ablations, nuances, lede/prereqs material). Every explainer run produces one. This is the **contract** consumed by `paper-companion` to skip re-fetching and re-searching.
 - `figure.png` — extracted teaser/architecture figure from the PDF (when one figure is enough)
 - `figure-1.png` + `figure-2.png` — when two complementary figures are extracted
+- `companion.html` — optional long-form companion artifact (only present if `/paper-companion` was run on this paper)
 - `memory-bank.md` — list of all discovered papers, with the main paper marked `analyzed`
 - `mind-graph.md` — topic-paper connection graph
 - `references.bib` — BibTeX for all papers
@@ -65,6 +67,8 @@ This step exists because deep paper reading benefits a lot from the strongest mo
 - PDF file path → no arXiv ID; jump to **Step 2 (PDF branch)**
 
 **Skip if already done**. Before doing anything else, check whether `$PAPERS_DIR/<safe-kebab-title>/<safe-kebab-title>.html` already exists. If it does, ask the user one short question: regenerate from scratch / update related-work only / open the existing one / skip. Do not silently overwrite.
+
+The **regenerate** and **update related-work only** branches also rewrite `scratchpad.md` (so the orient layer stays in sync with the HTML). The **open existing** and **skip** branches leave both files untouched.
 
 ---
 
@@ -195,12 +199,64 @@ Only fall back when the pdftotext path has genuinely failed; don't substitute ar
 - Single figure: save as `figure.png` in the paper folder
 - Two figures: save as `figure-1.png` and `figure-2.png` (and update the HTML's "FROM THE PAPER" section to render both, each with its own type label)
 
-### Scratchpad output (kept in memory, not written to disk)
+### Persist deep-read state — write `scratchpad.md`
 
-By the end of Step 3 you must have:
-- 5-10 section pointers ready for attribution (e.g., `"§3.1 defines V"`, `"Eq. 4"`, `"Table 4 ablation"`, `"Fig. 5"`)
-- 2-4 nuances most summaries miss (acknowledged limitation, surprising ablation, code/paper discrepancy, hyperparameter sensitivity)
-- The path to `figure.png` if extracted
+By the end of Step 3, write `$PAPERS_DIR/<safe-kebab-title>/scratchpad.md`. This file is the **contract** between `paper-explainer` and `paper-companion`: every explainer run produces one, and the companion reads from it to skip its own web-search + paper-extraction. Step 5 (HTML generation) also reads from this file for the fields below — single source of truth, no drift between scratchpad and HTML.
+
+Structure (all sections required, in this order):
+
+```markdown
+# <Paper Title>
+
+## Metadata
+- **Title**: ...
+- **Authors**: ...
+- **arXiv ID**: XXXX.XXXXX
+- **Categories**: cs.CV, cs.LG
+- **Date**: YYYY-MM
+- **Venue**: NeurIPS 2025 / preprint / ...
+- **GitHub**: <url or "—">
+- **Project page**: <url or "—">
+
+## Section anchors
+5–10 bullets in `§X.Y — short description` form (e.g., `§3.2 — defines V`,
+`Eq. 4 — anomaly score`, `Table 4 — main ablation`).
+
+## Named components & terminology
+The paper's actual notation for model components — one line each
+(`encoder f_θ`, `predictor g_φ`, `target s`, `context c`). Companion §2
+SVG labels lift from here verbatim.
+
+## Loss function (verbatim)
+The canonical loss in LaTeX form, derived from code when available. Use
+`\text{sg}[...]` for stop-gradient. Avoid double subscripts on the same base
+(`\hat s_y^{(i)}_j` breaks KaTeX — use `\hat s^{(i)}_j` or `\hat s_{y,j}^{(i)}`).
+Companion §3 renders this directly.
+
+## Key equations (additional)
+1–3 more equations beyond the loss, each with a source label
+(`Eq. 4 — anomaly score`).
+
+## Benchmarks (headline)
+3–6 main results with dataset + setup + table attribution.
+Example: `ImageNet linear probe: 79.3 (ViT-H/14, Table 2)`.
+
+## Ablations (with table attribution)
+2–4 ablation deltas in the form `(component removed → metric drop, Table N)`.
+Companion §6 needs deltas, not just headline numbers.
+
+## Nuances
+2–4 items: acknowledged limitations, surprising ablations,
+code/paper discrepancies, hyperparameter sensitivities. Section pointers
+mandatory (`§6.2 acknowledges scaling beyond g/14 was not explored`).
+
+## Lede + prereqs material
+1–2 paragraphs framing what this paper changes relative to predecessors
+(feeds the companion's §1 + lede paragraph). Followed by 2–4 concept
+prerequisites with one-sentence framings (feeds the companion's prereqs box).
+```
+
+Additional in-memory state (figure paths, related-papers tiering, BibTeX, design-token decisions) is **presentation-layer** and stays in memory — don't put it in scratchpad. Scratchpad is the structured intermediate; HTML is the presentation.
 
 ---
 
@@ -232,63 +288,75 @@ De-duplicate against Step 2's reference list. Combine into a single **papers lis
 
 ### Design tokens
 
-```
-Page bg (light):     #f3ede3   warm sandy beige
-Card bg (light):     #faf6ef
-Page bg (dark):      #1a1612   deep warm brown
-Card bg (dark):      #25201a
-Card border:         1px solid var(--border)  →  #e4d9c8 light / #3a3128 dark
-Hover border:        #b07d3c (both modes)
-Accent blue:         #4a7296
-Accent mauve:        #7a5c96
-Accent sage:         #3d7858
-Accent amber:        #a06c24
-Text primary:        #1c150e light / #f0e8d8 dark
-Text muted:          #7a6a58 light / #b0a090 dark
-Text subtle:         #b0a090 light / #7a6a58 dark
-Font:                -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif
-Layout:              max-width 960px, centered, padding 32px 24px
-Cards:               border-radius 12px, padding 20px 24px, margin-bottom 16px, box-shadow: 0 1px 4px rgba(80,60,30,0.07)
-Section hdrs:        11px, font-weight 700, letter-spacing 0.1em, uppercase, color #8a7764
+The explainer one-pager uses the same distill.pub-inspired palette as `paper-companion`. Side-by-side, the one-pager and companion for the same paper should look like two outputs of one project — typography stack and color tokens overlap verbatim.
+
+```css
+:root {
+  --serif: 'Crimson Pro', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --sans:  'Karla', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --mono:  'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --ink:        #1a1a1a;   /* body text */
+  --ink-soft:   #444;
+  --ink-mute:   #7a7a7a;   /* section labels, anchors, captions */
+  --paper:      #fdfdfb;   /* page bg + card bg */
+  --rule:       #e8e6e1;   /* card border, hairlines */
+  --rule-soft:  #f5f3ee;   /* shaded blocks, header gradient end */
+  --accent:     #8b3a1f;   /* primary accent — borders, links, target features */
+  --teal:       #1d6a6a;   /* secondary — context features, "known" side */
+  --purple:     #534ab7;   /* tertiary — actions, query, eq-row labels */
+}
 ```
 
-Use CSS custom properties on `:root` so dark mode is a single `prefers-color-scheme` override.
+- Body text in `var(--serif)`. All headers, figures, callouts, captions, badges, code, and section labels in `var(--sans)`. Math via KaTeX.
+- Layout: `max-width: 960px`, centered, `padding: 32px 24px`.
+- Cards: `background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(26,26,26,0.04);`.
+- Section labels: `font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-mute);`.
+- Light-only — distill.pub's reference theme is light-mode. No `prefers-color-scheme: dark` block here. (If dark mode is needed later, add it as a separate override; not in scope.)
+- Avoid using more than 3 colors per figure. Avoid blue + green together (color-blindness pitfall).
 
 ### Required `<head>` includes
 
-- `<meta charset="UTF-8">`, `<meta name="viewport">`
-- KaTeX CDN for math (auto-render):
-  ```html
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
-    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
-  ```
-- `@media print { body { background: white; } .no-print { display: none; } }` for printable archives.
-- Dark mode block via `@media (prefers-color-scheme: dark)`.
+```html
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><PaperName> — Paper explainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Karla:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload='renderMathInElement(document.body, {delimiters: [{left: "$$", right: "$$", display: true},{left: "$", right: "$", display: false}], throwOnError: false});'></script>
+```
+
+This block is **identical** to `paper-companion`'s `<head>` includes (KaTeX version, font preconnect, auto-render config). Keep them in sync.
+
+Also include a print stylesheet via `@media print { body { background: white; } .no-print { display: none; } }` for printable archives.
 
 ### Sections (in order)
 
 **1. HEADER**
-- Card with `linear-gradient(135deg, #f0e6d4, #e8dcc8)` (light) / `linear-gradient(135deg, #2a241c, #20180e)` (dark)
-- Title large bold, `clamp(18px, 3vw, 27px)`
-- Authors (first 4, then "et al.") + affiliation if obvious + venue / submission date
+- Wide card with subtle gradient `linear-gradient(180deg, var(--paper), var(--rule-soft))` and a 3px left rule in `var(--accent)`.
+- Title in `var(--sans)`, large semibold, `clamp(20px, 3.2vw, 30px)`. Color `var(--ink)`.
+- Authors (first 4, then "et al.") + affiliation if obvious + venue / submission date — all `var(--sans)`, `var(--ink-soft)`.
 - **Pill badges in row** (in this order; skip any that don't apply):
   1. Date (e.g. "Feb 2026") + version if not v1 (e.g. "v2 · Sep 2025")
   2. Categories ("cs.CV · cs.LG")
   3. Venue ("NeurIPS 2025", "CVPR 2026", "ICLR 2026") if accepted
-  4. arXiv link (`badge.blue` class, "arXiv 2502.08321")
-  5. GitHub repo (`badge.sage` class, with `&#x2328;&#xfe0e;` keyboard glyph + `<owner>/<repo>`)
+  4. arXiv link (`badge.accent` class — accent border + accent text, "arXiv 2502.08321")
+  5. GitHub repo (`badge.teal` class, with `&#x2328;&#xfe0e;` keyboard glyph + `<owner>/<repo>`)
   6. Project page ("project page")
   7. Demo links — Colab, HuggingFace Spaces ("Colab demo", "HF demo"). Add when the project page or README links to one.
   8. Checkpoints ("checkpoints" → HuggingFace collection / Drive)
   9. OpenReview, Author's homepage PDF — when arXiv body is paywalled or noticeably different from the conference version
   10. Reading time pill (e.g. `~22 min read`) with `title` tooltip "Estimated from body word count". Compute as `ceil(body_words / 220)` minutes, where `body_words` is the whitespace-split word count of the paper body (`body.txt` from the cache, post pdftotext/ar5iv, with the references section stripped). 220 wpm is the rough target for technical reading; do not retune per paper.
-- **Copy BibTeX** button — small `<button class="no-print">` that, on click, copies the paper's BibTeX entry to clipboard via `navigator.clipboard.writeText(...)`. Use the **official BibTeX from the project page** if found; otherwise auto-generate `@misc` from the arXiv ID. Avoid escaped Unicode in the JS string — write `é` not `\\\'e`.
+- Badge base style: `.badge { display: inline-flex; align-items: center; padding: 3px 10px; border: 1px solid var(--rule); border-radius: 20px; font-family: var(--sans); font-size: 12px; color: var(--ink-mute); text-decoration: none; }`. `.badge:hover { border-color: var(--accent); color: var(--ink); }`. `.badge.accent` overrides border + text to `var(--accent)`. `.badge.teal` overrides to `var(--teal)`.
+- **Copy BibTeX** button — small `<button class="no-print copy-btn">` that, on click, copies the paper's BibTeX entry to clipboard via `navigator.clipboard.writeText(...)`. Use the **official BibTeX from the project page** if found; otherwise auto-generate `@misc` from the arXiv ID. Avoid escaped Unicode in the JS string — write `é` not `\\\'e`. Style matches the badge pill (border `var(--rule)`, hover `var(--accent)`); flash `border-color: var(--teal); color: var(--teal);` on success.
 
 **2. TL;DR**
-- Left-border card: `border-left: 4px solid; border-image: linear-gradient(to bottom, #4a7296, #7a5c96) 1`
-- 2-3 punchy sentences, 18-20px, line-height 1.65
+- Card with a 4px solid left border in `var(--accent)`.
+- 2-3 punchy sentences, 18-20px, line-height 1.65, `var(--serif)`, `color: var(--ink)`.
 - Math allowed via `$...$` (KaTeX inline). Use math when the paper's contribution is fundamentally an equation (e.g. a new loss).
 
 **3. PROBLEM ↔ METHOD** (2-col grid, gap 16px)
@@ -301,23 +369,24 @@ Use CSS custom properties on `:root` so dark mode is a single `prefers-color-sch
   .bullet-list { padding-left: 14px; list-style: none; }
   .bullet-list li {
     position: relative; margin-bottom: 9px;
-    font-size: 14px; line-height: 1.55; color: var(--text);
+    font-family: var(--serif); font-size: 15px; line-height: 1.55; color: var(--ink);
   }
   .bullet-list li::before {
     content: ''; position: absolute; left: -14px; top: 10px;
-    width: 5px; height: 5px; background: var(--accent-blue);
+    width: 5px; height: 5px; background: var(--accent);
     border-radius: 1px;
   }
+  .anchor { font-family: var(--sans); font-size: 12px; color: var(--ink-mute); margin-left: 4px; white-space: nowrap; }
   ```
 - Bullet content can freely mix plain text, `<strong>`, `<em>`, inline KaTeX (`$...$`), and `<span class="anchor">§x.y</span>` — all flow as inline text under this CSS.
 
 **4. CORE DIAGRAM** (full-width card) ← most important
 - Section header: "HOW IT WORKS" + 1-line subtitle naming the figure (e.g. "Architecture overview, mirrors Fig. 2")
 - Inline SVG `width="100%"`, `viewBox="0 0 900 H"` where H is whatever fits
-- SVG background `#f0e8d6` with subtle grid pattern `#c8b89a` at 0.35 opacity, 40px spacing
-- Component rects: deep gradient fills, `rx="10"` for blocks, `rx="20"` for pill I/O nodes
-- Component names MUST use the paper's actual terminology (V, f_θ, iBOT++, etc.)
-- 2-3 sentence caption below the SVG
+- SVG background `var(--rule-soft)` (creamy off-white) with optional subtle grid `var(--rule)` at 0.5 opacity, 40px spacing. Keep it quiet — the diagram is the focus, not the texture.
+- Component rects: solid fills using the branch palette below, `rx="10"` for blocks, `rx="20"` for pill I/O nodes. Text inside rects is `var(--paper)` (light) for readability against the saturated fill.
+- Component names MUST use the paper's actual terminology (V, f_θ, iBOT++, etc.) — lift them from `scratchpad.md`'s **Named components & terminology** section verbatim.
+- 2-3 sentence caption below the SVG, `var(--sans)`, `var(--ink-soft)`.
 
 **Text overflow validation (mandatory)**: before writing the SVG, check every `<text>` element against its parent rect using `char_count × font_size × 0.55 ≤ rect_width`. If any label fails, shorten the label or widen the rect, then re-check. After writing the HTML, run:
 
@@ -328,13 +397,14 @@ uv run python scripts/validate_svg.py <output.html>
 
 If it reports any overflow, fix the offending labels and re-save before opening the page.
 
-SVG branch colour guide:
-- Primary branch: deep steel blue `#1a4870` → `#4a90c8`
-- Secondary branch: deep mauve `#4a2870` → `#8060c8`
-- Language/text branch: deep teal `#0d4848` → `#3a9090`
-- Input/output nodes: deep sage `#1a4a2e` → `#4a9060`
-- Loss annotations (warm): amber `#7a4800` text, `#3a1800` bg
-- Loss annotations (cool): sage `#1a5030` text, `#0a2818` bg
+SVG branch colour guide (matches `paper-companion`):
+- Primary / context / "known" branch: `var(--teal)` `#1d6a6a` fill, `var(--paper)` text
+- Secondary / target / "predicted" branch: `var(--accent)` `#8b3a1f` fill, `var(--paper)` text
+- Action / query / intervention: `var(--purple)` `#534ab7` fill, `var(--paper)` text
+- Input / output nodes: `var(--ink-soft)` `#444` fill, `var(--paper)` text (or `var(--rule-soft)` fill + `var(--ink)` text for "passive" nodes)
+- Loss annotations: `var(--ink-soft)` text on `var(--rule-soft)` bg, sans 11px
+
+Stick to at most 3 branch colors per diagram. Avoid mixing teal with green-adjacent hues elsewhere in the figure (color-blindness pitfall).
 
 **4b. KEY EQUATIONS & QUOTES** (full-width card; mandatory if the paper has a defining equation or any non-trivial loss/objective)
 - Section header: "KEY EQUATIONS & QUOTES"
@@ -343,22 +413,23 @@ SVG branch colour guide:
 - Quotes must be the paper's actual prose, italicized, with a small uppercase anchor showing the exact source (e.g. `§3.2 — Why masking-invariance works`).
 - Suggested CSS:
   ```css
-  .eq-row { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--border); }
+  .eq-row { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--rule); }
   .eq-row:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
   .eq-label {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--accent-blue);
-    margin-bottom: 6px;
+    font-family: var(--sans); font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--purple); margin-bottom: 6px;
   }
   .eq-quote, .paper-quote blockquote {
-    font-size: 13px; font-style: italic; color: var(--muted);
-    line-height: 1.55; margin: 8px 0 0;
-    padding: 6px 12px; border-left: 2px solid var(--border);
+    font-family: var(--serif); font-size: 14px; font-style: italic;
+    color: var(--ink-soft); line-height: 1.55; margin: 8px 0 0;
+    padding: 6px 12px; border-left: 2px solid var(--rule);
   }
   .paper-quote { margin: 12px 0; }
   .paper-quote .quote-anchor {
-    display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+    display: block; font-family: var(--sans); font-size: 10px;
+    font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-mute); margin-bottom: 4px;
   }
   ```
 - HTML pattern for an equation row:
@@ -387,35 +458,40 @@ SVG branch colour guide:
 
 **5. KEY RESULTS** (full-width card)
 - 4-6 metric cards, flex-wrap, min-width 140px, flex 1
-- Large value: 32px bold, color depends on type (sage `#2e5f3e` improvement, blue `#2a4f70` neutral, amber `#7a4c10` cost/efficiency)
-- Label: 11px uppercase
+- Large value: 32px sans semibold, `font-variant-numeric: tabular-nums`. Color depends on type:
+  - `var(--teal)` for improvement / strong positive
+  - `var(--ink)` for neutral
+  - `var(--accent)` for cost / efficiency
+- Label: 11px sans uppercase, `var(--ink-mute)`
 - **Context line is mandatory and must attribute the result**: dataset + setup + table/figure pointer.
-  Example: `ImageNet-256 · L/2 model · Table 5` (not just `ImageNet`).
-- Card background `#f0e8d8`, hover border `#b07d3c`
+  Example: `ImageNet-256 · L/2 model · Table 5` (not just `ImageNet`). Sourced from `scratchpad.md`'s **Benchmarks (headline)** section.
+- Card background `var(--rule-soft)`, border `1px solid var(--rule)`, hover border `var(--accent)`.
 
 **6. NUANCES** (full-width card; only render if you found ≥2 nuances)
 - Section header: "WHAT MOST SUMMARIES MISS"
-- 2-4 bullets — each captures a non-obvious finding, an honest limitation acknowledged in the paper, a surprising ablation, or a code/paper discrepancy
+- 2-4 bullets sourced from `scratchpad.md`'s **Nuances** section — each captures a non-obvious finding, an honest limitation acknowledged in the paper, a surprising ablation, or a code/paper discrepancy
 - Each bullet must include a section pointer (e.g. `§6.2 acknowledges scaling beyond g/14 was not explored`, `code uses lr=1e-4 despite paper text saying 5e-4`)
+- Styling: each bullet as a small block with `border-left: 3px solid var(--accent); background: var(--rule-soft); padding: 10px 12px;` and `font-family: var(--serif);` for readability. Section pointers in `var(--sans) var(--ink-mute)`.
 - This is the section that distinguishes a deep reading from a HuggingFace blurb. Don't skip it for shallow papers — for shallow papers, omit the section entirely rather than padding it.
 
 **7. CONTRIBUTIONS + RELATED WORK** (2-col grid)
 - Left — "KEY CONTRIBUTIONS": 3-5 novel contributions as bullets (with section pointers)
-- Right — "RELATED WORK": 3-5 Tier 1 papers — name bold 13px, one-line note explaining the *specific* relationship (not "related to X"), small arXiv link in `#4a7296`
+- Right — "RELATED WORK": 3-5 Tier 1 papers — name semibold 13px sans, one-line note explaining the *specific* relationship (not "related to X"), small arXiv link in `var(--accent)`
 
 **8. RELATED PAPERS — TIERED CHIP CLOUD** (full-width card)
 - Section header: "RELATED PAPERS"
 - Three sub-rows, in order: Tier 1, Tier 2, Tier 3 — each with a small label `"DIRECTLY COMPARABLE"` / `"RELATED METHODS"` / `"BACKGROUND"` in the muted section-header style
-- Tier 1 chips: stronger border `#b07d3c`, slightly larger `font-size: 13px`, padding `5px 14px`
-- Tier 2 chips: standard `#e0d0b8` border, `font-size: 12px`
-- Tier 3 chips: subdued (`color: #a09080`, `border-color: #ece0cc`)
+- All chips share base style: `font-family: var(--sans); padding: 4px 12px; border: 1px solid var(--rule); border-radius: 18px; text-decoration: none; color: var(--ink-soft);`
+- Tier 1 chips: stronger `border-color: var(--accent); color: var(--accent);` slightly larger `font-size: 13px; padding: 5px 14px;`
+- Tier 2 chips: `border-color: var(--rule)` default; `font-size: 12px`; `color: var(--ink-soft)`
+- Tier 3 chips: subdued — `color: var(--ink-mute); border-color: var(--rule);` `font-size: 12px`
 - Every chip: `<a href="https://arxiv.org/abs/<id>" target="_blank" title="<one-line factual hook from the paper's abstract>">Title — Authors (Year)</a>`
 - **Tooltip rules**: the `title` must be a single factual sentence drawn from the abstract or a comparable-fact relationship to the main paper. **Never** describe content the chip itself doesn't contain — e.g. don't promise an architecture diagram if the linked paper doesn't have one. **Never** copy boilerplate ("a paper about X") — be concrete ("Replaces patch tokens with learned slots; +2.3 mIoU on ADE20K"). Aim for ≤ 120 chars.
 - Aim for 18-35 chips total across all tiers
 
 **9. FOOTER**
-- Citation line, 12px muted (use the official BibTeX from the project page if available; otherwise a self-generated `@misc{<authorYear>, ...}`).
-- One Resources line: `Project page · GitHub · Demo · Video` (only those that exist) as small `#4a7296` links.
+- Citation line, 12px sans `var(--ink-mute)` (use the official BibTeX from the project page if available; otherwise a self-generated `@misc{<authorYear>, ...}`).
+- One Resources line: `Project page · GitHub · Demo · Video` (only those that exist) as small links in `var(--accent)`.
 - One generation line: `Generated YYYY-MM-DD · v<N>` only — **do not include absolute paths** (no `/Users/<name>/...`) since the page is portable. `<N>` is the regen count for *this paper's* HTML: 1 on the first run, increment by 1 every time the user picks "regenerate from scratch" or "update related-work only" in Step 1's skip prompt. Determine the previous value by parsing the existing `<safe-kebab-title>.html` (look for the `Generated …· v` line) before overwriting; if no prior file or value can't be parsed, write `v1`.
 
 ### CSS extras
@@ -427,16 +503,9 @@ SVG branch colour guide:
   .card { box-shadow: none !important; break-inside: avoid; }
   .no-print, .copy-bibtex { display: none !important; }
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1a1612; --card: #25201a; --border: #3a3128;
-    --text: #f0e8d8; --muted: #b0a090; --subtle: #7a6a58;
-  }
-  body { background: var(--bg); color: var(--text); }
-  .card { background: var(--card); border-color: var(--border); }
-  /* The SVG card uses its own warm background, so it stays cream in dark mode for readability — desired. */
-}
 ```
+
+No dark-mode override — the distill.pub palette is light-only by design, matching `paper-companion`. Add a separate `@media (prefers-color-scheme: dark)` block later if needed; out of scope here.
 
 ---
 
@@ -466,17 +535,26 @@ In `$PAPERS_DIR/<safe-kebab-title>/`:
 
 ## Step 7 — Update the global index
 
-Append (or update if the entry exists) `$PAPERS_DIR/index.html`:
-- Each row: paper title, authors, date, link to its folder, link to its `.html`
-- Sort newest first
-- Use the same design tokens as the explainers
-- Keep this file simple — it's a directory, not another visual artifact
+Regenerate `$PAPERS_DIR/index.html` by running the shared script:
+
+```bash
+uv run python scripts/regen_index.py
+```
+
+The script walks `$PAPERS_DIR/*/` (one level deep), reads each folder's `<slug>.html` for title/authors/date, checks for an adjacent `companion.html`, and emits a fresh `index.html` with:
+- One row per paper, recency-sorted
+- A `one-pager` badge linking to `<slug>.html` (always present when the row exists)
+- A `deep companion` badge linking to `companion.html` when present
+- A depth-filter pill toggle at the top (`[All papers (N)] [With companion (M)]`), state persisted via `localStorage`
+- The same distill.pub design tokens as the explainer / companion HTML
+
+Both `paper-explainer` and `paper-companion` call this script at the end of their runs — keep them in sync via the script, not duplicate templates.
 
 ---
 
 ## Step 8 — Save and open
 
-1. Save HTML to `$PAPERS_DIR/<safe-kebab-title>/<safe-kebab-title>.html` using the Write tool
+1. Save HTML to `$PAPERS_DIR/<safe-kebab-title>/<safe-kebab-title>.html` using the Write tool. (`scratchpad.md` was already written in Step 3.)
 2. Run `open "$PAPERS_DIR/<safe-kebab-title>/<safe-kebab-title>.html"` via Bash (macOS) or `xdg-open` (Linux)
 3. Tell the user: output path, paper title, total related papers (cited + discovered, with tier counts), the knowledge base location, and one specific nuance you found that was not in the abstract
-4. Offer: "Want me to dive deeper on any related paper, generate a summary in `summaries/`, or compare specific papers?"
+4. Offer: "Want me to dive deeper on any related paper, generate a summary in `summaries/`, compare specific papers, or **build a deep companion artifact** with `/paper-companion <slug>`?"
