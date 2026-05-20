@@ -2,9 +2,10 @@
 """Regenerate the global index page at $PAPER_EXPLAINER_OUTPUT_DIR/index.html.
 
 Walks one level under $PAPER_EXPLAINER_OUTPUT_DIR. For each folder containing
-<slug>.html, parses a small set of fields from the HTML (title, authors, date)
-and notes whether an adjacent companion.html exists. Emits a fresh index.html
-listing every paper with depth badges and a filter toggle.
+`one-pager.html` (or legacy `<slug>.html` for pre-0.2.0 folders), parses a
+small set of fields from the HTML (title, authors, date) and notes whether
+an adjacent `companion.html` exists. Emits a fresh `index.html` listing
+every paper with depth badges and a filter toggle.
 
 Usage:
     uv run python scripts/regen_index.py            # uses $PAPER_EXPLAINER_OUTPUT_DIR
@@ -51,8 +52,18 @@ def parse_paper(folder: Path) -> dict | None:
     slug = folder.name
     if slug.startswith("."):
         return None
-    html_path = folder / f"{slug}.html"
-    if not html_path.is_file():
+
+    # Prefer the canonical `one-pager.html`, fall back to the legacy
+    # `<slug>.html` so pre-0.2.0 paper folders still surface in the index.
+    one_pager = folder / "one-pager.html"
+    legacy = folder / f"{slug}.html"
+    if one_pager.is_file():
+        html_path = one_pager
+        html_filename = "one-pager.html"
+    elif legacy.is_file():
+        html_path = legacy
+        html_filename = f"{slug}.html"
+    else:
         return None
 
     try:
@@ -90,6 +101,7 @@ def parse_paper(folder: Path) -> dict | None:
         "title": title or slug,
         "authors": authors,
         "date": paper_date,
+        "html_filename": html_filename,
         "has_companion": (folder / "companion.html").is_file(),
         "has_scratchpad": (folder / "scratchpad.md").is_file(),
         "folder": folder,
@@ -237,6 +249,7 @@ def render(papers: list[dict]) -> str:
             title = html.escape(p["title"])
             authors = html.escape(p["authors"]) if p["authors"] else ""
             paper_date = html.escape(p["date"])
+            one_pager_href = f"{slug}/{html.escape(p['html_filename'])}"
             meta_parts = []
             if authors:
                 meta_parts.append(authors)
@@ -244,7 +257,7 @@ def render(papers: list[dict]) -> str:
                 meta_parts.append(paper_date)
             meta = " · ".join(meta_parts)
             badges = [
-                f'<a class="badge" href="{slug}/{slug}.html">one-pager</a>'
+                f'<a class="badge" href="{one_pager_href}">one-pager</a>'
             ]
             if p["has_companion"]:
                 badges.append(
@@ -253,7 +266,7 @@ def render(papers: list[dict]) -> str:
             rows_html.append(
                 f'<div class="row" data-companion="{1 if p["has_companion"] else 0}">'
                 f'<div class="row-main">'
-                f'<a class="title" href="{slug}/{slug}.html">{title}</a>'
+                f'<a class="title" href="{one_pager_href}">{title}</a>'
                 f'<div class="meta">{meta}</div>'
                 f'</div>'
                 f'<div class="row-badges">{"".join(badges)}</div>'

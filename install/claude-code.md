@@ -48,7 +48,7 @@ Open Claude Code (`claude` CLI or the desktop app) in any directory and type:
 Claude will:
 
 1. Resolve the arXiv ID to `2502.08321`.
-2. Check `$PAPER_EXPLAINER_OUTPUT_DIR/screener-pathology-segmentation/screener-pathology-segmentation.html` — if present, ask whether to regenerate.
+2. Check `$PAPER_EXPLAINER_OUTPUT_DIR/screener-pathology-segmentation/one-pager.html` — if present, ask whether to regenerate.
 3. Otherwise: fetch metadata, body, references, GitHub repo, project page (all in parallel; cached after first run).
 4. Read the paper carefully (Method / Experiments / Ablations / Limitations / Appendix), source code, and the project page.
 5. Run `scripts/extract_figure.py` from this repo on the downloaded PDF.

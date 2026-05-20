@@ -269,7 +269,7 @@ This step is the only opinionated one in the pipeline — explainer asks gently,
      - Otherwise → print and **stop**:
        > No explainer found for `<slug>`. Run `/paper-explainer <arxiv-id>` first, or re-run with `--force` to extract from scratch.
 
-4. **Check the explainer HTML (supplementary).** If `$PAPERS_DIR/<slug>/<slug>.html` exists, read it for already-rendered KaTeX equations and attributed result strings. Use these to *complement* the scratchpad — they're useful as cross-references — never to substitute for what the scratchpad says.
+4. **Check the explainer HTML (supplementary).** If `$PAPERS_DIR/<slug>/one-pager.html` exists (or the legacy `<slug>.html` for pre-0.2.0 folders), read it for already-rendered KaTeX equations and attributed result strings. Use these to *complement* the scratchpad — they're useful as cross-references — never to substitute for what the scratchpad says.
 
 5. **Lineage detection.** Scan `$PAPERS_DIR/.lineages/*.json` for any manifest whose `papers[].slug` array contains `<slug>`.
    - **Found** → use the manifest's `title` for the eyebrow text (`<title> · paper <position> of <total>`), set `prev_slug` / `next_slug` from neighboring entries, populate the footer prev/next links to `../<prev_slug>/companion.html` and `../<next_slug>/companion.html`. Empty prev for position 1; empty next for the last position.

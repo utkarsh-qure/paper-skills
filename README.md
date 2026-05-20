@@ -7,7 +7,7 @@
 | Stage | Skill | Volume | Output |
 |---|---|---|---|
 | **Discover** | [`paper-finder`](skills/paper-finder.md) | hundreds | topic `memory-bank.md`, `mind-graph.md`, `references.bib` |
-| **Orient** | [`paper-explainer`](skills/paper-explainer.md) | dozens | one-pager `<slug>.html` + structured `scratchpad.md` + KB updates |
+| **Orient** | [`paper-explainer`](skills/paper-explainer.md) | dozens | `one-pager.html` + structured `scratchpad.md` + KB updates |
 | **Master** | [`paper-companion`](skills/paper-companion.md) | a handful | long-form `companion.html` (700–1200 lines) consuming the scratchpad |
 
 You install the skills once for your agent (Claude Code, Cursor, Aider, Cline, Codex CLI, …) and from then on you can drop an arXiv link into any chat and get back:
@@ -44,7 +44,7 @@ paper-skills/
 │   └── other-agents.md            ← generic setup for any other agent
 └── examples/
     └── screener-pathology-segmentation/
-        ├── screener-pathology-segmentation.html  ← orient: the one-pager
+        ├── one-pager.html                         ← orient: the visual explainer
         ├── companion.html                        ← master: the deep companion
         ├── scratchpad.md                         ← contract between explainer and companion
         ├── figure.png
@@ -98,7 +98,7 @@ Plus **dark mode** and **print stylesheet**.
 
 ### `paper-explainer` — 8 steps (orient)
 
-1. **Resolve input** — arXiv URL/ID, or local PDF path. If `<paper-slug>.html` already exists in the output dir, ask whether to regenerate, update related-work only, open the existing one, or skip.
+1. **Resolve input** — arXiv URL/ID, or local PDF path. If `one-pager.html` already exists in the output dir, ask whether to regenerate, update related-work only, open the existing one, or skip.
 2. **Parallel fetch** — metadata (Atom API), full body (ar5iv → arxiv.org/html → PDF text fallback), Semantic Scholar reference list, GitHub repo URL, project-page URL. Each fetch is cached under `$PAPER_EXPLAINER_OUTPUT_DIR/.cache/<arxiv-id>/` so re-runs on the same paper are free.
 3. **Deep reading** — full paper body (Method, Experiments, Ablations, Limitations, Appendix), the source code (loss + forward pass + config), the project page (author-curated TL;DR, official BibTeX), and 1-hop citation follow when the context demands it. The agent persists `scratchpad.md` (metadata, section anchors, named components, loss verbatim, key equations, benchmarks, ablations with table attribution, nuances, lede/prereqs material) — this is the contract consumed by `paper-companion`.
 4. **Figure extraction** — classify each figure in the paper by its caption (architecture / concept / qualitative / chart / teaser), pick **one or two** figures that *complement* the SVG diagram instead of duplicating it. Default is Fig. 1; override when Fig. 1 is a pure architecture overview (use Fig. 2/3 instead) or pair a teaser Fig. 1 with a separate mechanism figure. Run `scripts/extract_figure.py` (cross-platform PyMuPDF, with `qlmanage` as a fast macOS shortcut for page 1), then verify visually that neither figure nor caption is truncated.
@@ -112,12 +112,11 @@ Plus **dark mode** and **print stylesheet**.
 When invoked with `/paper-companion <slug>` (or arXiv ID/URL), the companion reads only from disk:
 
 1. **Step 0** — confirm a frontier model (Opus 4.7 max thinking in Claude Code, GPT-5.5 max thinking fast in Cursor/Codex). Warn if you're on a lesser model.
-2. **Step 1** — locate prior work. Read `scratchpad.md` if present (skip all web-fetching). If not, prompt the user to run `/paper-explainer <arxiv-id>` first — or pass `--force` to extract from scratch *without* writing scratchpad/KB.
-3. **Step 1.5** — lineage auto-detect from `$PAPER_EXPLAINER_OUTPUT_DIR/.lineages/<slug>.json`. If the paper is part of a series, eyebrow text and footer prev/next links populate automatically. New lineages prompt once for the paper list.
-4. **Steps 2–4** — ask three authoring questions (delivery cadence, math depth, visual style), plan the artifact, write the lineage recap card.
-5. **Steps 5–6** — `Write` the HTML in one call, sanity-check (length, KaTeX patterns, SVG validation).
-6. **Step 7** — regen the global index via the shared script so the new companion shows up with a `deep companion` badge.
-7. **Step 8** — open the page and report.
+2. **Step 1** — locate prior work and detect lineage. Read `scratchpad.md` if present (skip all web-fetching); if not, prompt the user to run `/paper-explainer <arxiv-id>` first — or pass `--force` to extract from scratch *without* writing scratchpad/KB. Then scan `$PAPER_EXPLAINER_OUTPUT_DIR/.lineages/*.json` — if the paper is part of a series, eyebrow text and footer prev/next links populate automatically. New lineages prompt once for the paper list.
+3. **Steps 2–4** — ask three authoring questions (delivery cadence, math depth, visual style), plan the artifact, write the lineage recap card.
+4. **Steps 5–6** — `Write` the HTML in one call, sanity-check (length, KaTeX patterns, SVG validation).
+5. **Step 7** — regen the global index via the shared script so the new companion shows up with a `deep companion` badge.
+6. **Step 8** — open the page and report.
 
 ### End-to-end on one paper
 
@@ -127,7 +126,7 @@ When invoked with `/paper-companion <slug>` (or arXiv ID/URL), the companion rea
 
 /paper-explainer https://arxiv.org/abs/2502.08321
 # → ~/papers/screener-pathology-segmentation/
-#     ├── screener-pathology-segmentation.html   (one-pager)
+#     ├── one-pager.html                         (the visual explainer)
 #     ├── scratchpad.md                          (structured deep-read)
 #     ├── figure.png
 #     ├── memory-bank.md / mind-graph.md / references.bib
@@ -223,7 +222,7 @@ $PAPER_EXPLAINER_OUTPUT_DIR/
 ├── .cache/<arxiv-id>/                          ← cached metadata / body / refs / pdf
 ├── .lineages/<lineage-slug>.json               ← lineage manifest (paper list + ordering)
 └── <paper-slug>/
-    ├── <paper-slug>.html                       ← one-pager (paper-explainer)
+    ├── one-pager.html                          ← one-pager (paper-explainer)
     ├── scratchpad.md                           ← structured deep-read (paper-explainer)
     ├── companion.html                          ← long-form companion (paper-companion, optional)
     ├── figure.png   (or figure-1.png + figure-2.png)

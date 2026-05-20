@@ -25,7 +25,7 @@ PAPERS_DIR="${PAPER_EXPLAINER_OUTPUT_DIR:-$HOME/papers}"
 and use `$PAPERS_DIR` everywhere below. All file references in this spec assume this resolution.
 
 All files for this paper live in `$PAPERS_DIR/<safe-kebab-title>/`:
-- `<safe-kebab-title>.html` — the visual explainer
+- `one-pager.html` — the visual explainer (one row in the index per folder, badge labelled **one-pager**)
 - `scratchpad.md` — structured deep-read of the paper (metadata, section anchors, named components, loss, equations, benchmarks, ablations, nuances, lede/prereqs material). Every explainer run produces one. This is the **contract** consumed by `paper-companion` to skip re-fetching and re-searching.
 - `figure.png` — extracted teaser/architecture figure from the PDF (when one figure is enough)
 - `figure-1.png` + `figure-2.png` — when two complementary figures are extracted
@@ -66,7 +66,7 @@ This step exists because deep paper reading benefits a lot from the strongest mo
 - Bare `XXXX.XXXXX` → use as-is
 - PDF file path → no arXiv ID; jump to **Step 2 (PDF branch)**
 
-**Skip if already done**. Before doing anything else, check whether `$PAPERS_DIR/<safe-kebab-title>/<safe-kebab-title>.html` already exists. If it does, ask the user one short question: regenerate from scratch / update related-work only / open the existing one / skip. Do not silently overwrite.
+**Skip if already done**. Before doing anything else, check whether `$PAPERS_DIR/<safe-kebab-title>/one-pager.html` already exists. If it does, ask the user one short question: regenerate from scratch / update related-work only / open the existing one / skip. Do not silently overwrite. (Pre-0.2.0 folders may still contain `<safe-kebab-title>.html` instead — if that file exists, treat it the same way; new writes always go to `one-pager.html`.)
 
 The **regenerate** and **update related-work only** branches also rewrite `scratchpad.md` (so the orient layer stays in sync with the HTML). The **open existing** and **skip** branches leave both files untouched.
 
@@ -492,7 +492,7 @@ Stick to at most 3 branch colors per diagram. Avoid mixing teal with green-adjac
 **9. FOOTER**
 - Citation line, 12px sans `var(--ink-mute)` (use the official BibTeX from the project page if available; otherwise a self-generated `@misc{<authorYear>, ...}`).
 - One Resources line: `Project page · GitHub · Demo · Video` (only those that exist) as small links in `var(--accent)`.
-- One generation line: `Generated YYYY-MM-DD · v<N>` only — **do not include absolute paths** (no `/Users/<name>/...`) since the page is portable. `<N>` is the regen count for *this paper's* HTML: 1 on the first run, increment by 1 every time the user picks "regenerate from scratch" or "update related-work only" in Step 1's skip prompt. Determine the previous value by parsing the existing `<safe-kebab-title>.html` (look for the `Generated …· v` line) before overwriting; if no prior file or value can't be parsed, write `v1`.
+- One generation line: `Generated YYYY-MM-DD · v<N>` only — **do not include absolute paths** (no `/Users/<name>/...`) since the page is portable. `<N>` is the regen count for *this paper's* HTML: 1 on the first run, increment by 1 every time the user picks "regenerate from scratch" or "update related-work only" in Step 1's skip prompt. Determine the previous value by parsing the existing `one-pager.html` (look for the `Generated …· v` line) before overwriting; if no prior file or value can't be parsed, write `v1`.
 
 ### CSS extras
 
@@ -541,9 +541,9 @@ Regenerate `$PAPERS_DIR/index.html` by running the shared script:
 uv run python scripts/regen_index.py
 ```
 
-The script walks `$PAPERS_DIR/*/` (one level deep), reads each folder's `<slug>.html` for title/authors/date, checks for an adjacent `companion.html`, and emits a fresh `index.html` with:
+The script walks `$PAPERS_DIR/*/` (one level deep), reads each folder's `one-pager.html` (or legacy `<slug>.html` as a fallback for pre-0.2.0 folders) for title/authors/date, checks for an adjacent `companion.html`, and emits a fresh `index.html` with:
 - One row per paper, recency-sorted
-- A `one-pager` badge linking to `<slug>.html` (always present when the row exists)
+- A `one-pager` badge linking to `one-pager.html` (always present when the row exists)
 - A `deep companion` badge linking to `companion.html` when present
 - A depth-filter pill toggle at the top (`[All papers (N)] [With companion (M)]`), state persisted via `localStorage`
 - The same distill.pub design tokens as the explainer / companion HTML
@@ -554,7 +554,7 @@ Both `paper-explainer` and `paper-companion` call this script at the end of thei
 
 ## Step 8 — Save and open
 
-1. Save HTML to `$PAPERS_DIR/<safe-kebab-title>/<safe-kebab-title>.html` using the Write tool. (`scratchpad.md` was already written in Step 3.)
-2. Run `open "$PAPERS_DIR/<safe-kebab-title>/<safe-kebab-title>.html"` via Bash (macOS) or `xdg-open` (Linux)
+1. Save HTML to `$PAPERS_DIR/<safe-kebab-title>/one-pager.html` using the Write tool. (`scratchpad.md` was already written in Step 3.)
+2. Run `open "$PAPERS_DIR/<safe-kebab-title>/one-pager.html"` via Bash (macOS) or `xdg-open` (Linux)
 3. Tell the user: output path, paper title, total related papers (cited + discovered, with tier counts), the knowledge base location, and one specific nuance you found that was not in the abstract
 4. Offer: "Want me to dive deeper on any related paper, generate a summary in `summaries/`, compare specific papers, or **build a deep companion artifact** with `/paper-companion <slug>`?"
